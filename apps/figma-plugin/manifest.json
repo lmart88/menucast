@@ -4,8 +4,18 @@
   "api": "1.0.0",
   "main": "dist/plugin.js",
   "ui": "dist/ui.html",
-  "editorType": ["figma"],
+  "editorType": [
+    "figma"
+  ],
   "networkAccess": {
-    "allowedDomains": ["https://localhost:3000", "https://menucast.app"]
+    "allowedDomains": [
+      "http://localhost:3000",
+      "https://bgybedmooslmcfhbpigg.supabase.co"
+    ],
+    "reasoning": "We need to access localhost for development and the Supabase API for data retrieval.",
+    "devAllowedDomains": [
+      "http://localhost:3000",
+      "https://bgybedmooslmcfhbpigg.supabase.co"
+    ]
   }
 }

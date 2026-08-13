@@ -7,58 +7,101 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: #0a0a0a;
-      color: #fff;
-      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: #0d0d0d;
+      color: #f5f5f5;
+      padding: 16px;
       font-size: 13px;
     }
-    h1 { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
-    p { color: #666; font-size: 12px; line-height: 1.5; }
-    label { display: block; font-size: 12px; color: #888; margin-bottom: 6px; margin-top: 16px; }
+    h1 { font-size: 15px; font-weight: 600; margin-bottom: 2px; }
+    p.subtitle { color: #888; font-size: 12px; line-height: 1.4; margin-bottom: 14px; }
+    label { display: block; font-size: 11px; font-weight: 500; color: #aaa; margin-bottom: 5px; margin-top: 12px; text-transform: uppercase; letter-spacing: 0.05em; }
     input, select {
       width: 100%; padding: 8px 10px;
-      background: #1a1a1a; border: 1px solid #2a2a2a;
-      border-radius: 8px; color: #fff; font-size: 12px;
-      outline: none;
+      background: #1a1a1a; border: 1px solid #333;
+      border-radius: 6px; color: #fff; font-size: 12px;
+      outline: none; transition: border-color 0.15s;
     }
-    input:focus, select:focus { border-color: #444; }
+    input:focus, select:focus { border-color: #666; }
     button {
-      width: 100%; padding: 10px;
-      border-radius: 8px; border: none;
-      font-size: 13px; font-weight: 600; cursor: pointer;
-      transition: opacity 0.15s;
+      width: 100%; padding: 9px;
+      border-radius: 6px; border: none;
+      font-size: 12px; font-weight: 600; cursor: pointer;
+      transition: background 0.15s, opacity 0.15s;
     }
     button:disabled { opacity: 0.4; cursor: not-allowed; }
-    .btn-primary { background: #fff; color: #000; }
-    .btn-primary:hover:not(:disabled) { background: #e5e5e5; }
+    .btn-primary { background: #ffffff; color: #000000; }
+    .btn-primary:hover:not(:disabled) { background: #e0e0e0; }
     .btn-secondary {
-      background: #1a1a1a; color: #fff;
-      border: 1px solid #2a2a2a; margin-top: 8px;
+      background: transparent; color: #aaa;
+      border: 1px solid #333; margin-top: 8px;
     }
+    .btn-secondary:hover:not(:disabled) { background: #1a1a1a; color: #fff; }
+    .btn-outline {
+      background: rgba(255,255,255,0.05); color: #ddd;
+      border: 1px solid #333; margin-top: 8px; font-size: 11px; padding: 7px;
+    }
+    .btn-outline:hover:not(:disabled) { background: rgba(255,255,255,0.1); color: #fff; border-color: #555; }
     .status {
-      margin-top: 14px; padding: 10px 12px;
-      border-radius: 8px; font-size: 12px;
+      margin-top: 12px; padding: 8px 10px;
+      border-radius: 6px; font-size: 12px; line-height: 1.4;
+      word-break: break-word;
     }
-    .status.success { background: rgba(52,199,89,0.1); color: #34c759; border: 1px solid rgba(52,199,89,0.2); }
-    .status.error { background: rgba(255,69,58,0.1); color: #ff453a; border: 1px solid rgba(255,69,58,0.2); }
-    .status.loading { background: rgba(255,255,255,0.05); color: #888; border: 1px solid #2a2a2a; }
-    .divider { border: none; border-top: 1px solid #1a1a1a; margin: 16px 0; }
+    .status.success { background: rgba(52, 199, 89, 0.12); color: #4cd964; border: 1px solid rgba(52, 199, 89, 0.3); }
+    .status.error { background: rgba(255, 69, 58, 0.12); color: #ff5b52; border: 1px solid rgba(255, 69, 58, 0.3); }
+    .status.loading { background: rgba(255, 255, 255, 0.06); color: #bbb; border: 1px solid #333; }
     .section { display: none; }
     .section.visible { display: block; }
+
+    /* TV Display Specs Box */
+    .specs-card {
+      background: #141414;
+      border: 1px solid #282828;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-top: 12px;
+      margin-bottom: 12px;
+    }
+    .specs-title {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #777;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+    .specs-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      font-size: 12px;
+    }
+    .spec-item {
+      display: flex;
+      flex-direction: column;
+    }
+    .spec-item .label {
+      font-size: 10px;
+      color: #888;
+    }
+    .spec-item .val {
+      font-weight: 600;
+      color: #fff;
+      font-mono: monospace;
+    }
   </style>
 </head>
 <body>
   <h1>MenuCast</h1>
-  <p>Push your Figma menu to your restaurant TV</p>
+  <p class="subtitle">Push digital menus directly to your TV</p>
 
   <!-- Connect section -->
   <div id="connect-section" class="section visible">
     <label for="token-input">API Token</label>
-    <input id="token-input" type="password" placeholder="Paste your token from menucast.app" />
+    <input id="token-input" type="password" placeholder="Paste token from dashboard" />
 
     <label for="app-url-input">App URL</label>
-    <input id="app-url-input" type="text" value="https://menucast.app" />
+    <input id="app-url-input" type="text" value="http://localhost:3000" />
 
     <div style="margin-top: 16px">
       <button class="btn-primary" id="connect-btn">Connect</button>
@@ -73,95 +116,195 @@
       <option value="">Loading your TVs…</option>
     </select>
 
-    <div style="margin-top: 16px">
+    <!-- TV Display Specs Card -->
+    <div id="tv-specs-card" class="specs-card" style="display: none;">
+      <div class="specs-title">TV Display Specs</div>
+      <div class="specs-grid">
+        <div class="spec-item">
+          <span class="label">Resolution</span>
+          <span class="val" id="spec-res">1920 × 1080</span>
+        </div>
+        <div class="spec-item">
+          <span class="label">Aspect Ratio</span>
+          <span class="val" id="spec-ratio">16:9</span>
+        </div>
+        <div class="spec-item">
+          <span class="label">Orientation</span>
+          <span class="val" id="spec-orient">Landscape</span>
+        </div>
+        <div class="spec-item">
+          <span class="label">Display Code</span>
+          <span class="val" id="spec-code" style="color: #4cd964;">-</span>
+        </div>
+      </div>
+      <button class="btn-outline" id="create-frame-btn">📐 Create Matched Frame on Canvas</button>
+    </div>
+
+    <div style="margin-top: 14px">
       <button class="btn-primary" id="push-btn">Push Current Frame to TV</button>
-      <button class="btn-secondary" id="disconnect-btn">Disconnect</button>
+      <button class="btn-secondary" id="disconnect-btn">Disconnect / Switch Account</button>
     </div>
     <div id="push-status"></div>
   </div>
 
   <script>
-    const APP_URL_KEY = "menucast_app_url";
-    const TOKEN_KEY = "menucast_token";
-
     let token = "";
-    let appUrl = "";
+    let appUrl = "http://localhost:3000";
     let tvs = [];
-
-    // Restore saved state
-    const savedToken = localStorage.getItem(TOKEN_KEY);
-    const savedUrl = localStorage.getItem(APP_URL_KEY) || "https://menucast.app";
-    document.getElementById("app-url-input").value = savedUrl;
-    if (savedToken) {
-      token = savedToken;
-      appUrl = savedUrl;
-      showPushSection();
-    }
+    let selectedTv = null;
 
     function showStatus(elId, msg, type) {
       const el = document.getElementById(elId);
+      if (!msg) {
+        el.innerHTML = "";
+        return;
+      }
       el.innerHTML = `<div class="status ${type}">${msg}</div>`;
     }
 
     function showConnectSection() {
       document.getElementById("connect-section").classList.add("visible");
       document.getElementById("push-section").classList.remove("visible");
+      showStatus("connect-status", "", "");
     }
 
     function showPushSection() {
       document.getElementById("connect-section").classList.remove("visible");
       document.getElementById("push-section").classList.add("visible");
+      showStatus("push-status", "", "");
       loadTvs();
+    }
+
+    function updateTvSpecs(tv) {
+      selectedTv = tv;
+      const specsCard = document.getElementById("tv-specs-card");
+      if (!tv) {
+        specsCard.style.display = "none";
+        return;
+      }
+
+      specsCard.style.display = "block";
+      const w = tv.screen_width || 1920;
+      const h = tv.screen_height || 1080;
+      const ratio = tv.aspect_ratio || "16:9";
+      const orient = tv.orientation || (w >= h ? "Landscape" : "Portrait");
+
+      document.getElementById("spec-res").textContent = `${w} × ${h}`;
+      document.getElementById("spec-ratio").textContent = ratio;
+      document.getElementById("spec-orient").textContent = orient;
+      document.getElementById("spec-code").textContent = tv.pairing_code || "-";
+      document.getElementById("create-frame-btn").textContent = `📐 Create ${w}×${h} Frame on Canvas`;
     }
 
     async function loadTvs() {
       const select = document.getElementById("tv-select");
-      select.innerHTML = '<option value="">Loading…</option>';
+      select.innerHTML = '<option value="">Loading TVs…</option>';
+      const pushBtn = document.getElementById("push-btn");
+      pushBtn.disabled = true;
+
       try {
-        const res = await fetch(`${appUrl}/api/tv/list`, {
+        const cleanUrl = appUrl.replace(/\/+$/, "");
+        const res = await fetch(`${cleanUrl}/api/tv/list`, {
           headers: { Authorization: `Bearer ${token}` },
         });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || `HTTP ${res.status}`);
+        }
+
         const data = await res.json();
         tvs = data.tvs || [];
+
         if (tvs.length === 0) {
-          select.innerHTML = '<option value="">No TVs found — pair one first</option>';
+          select.innerHTML = '<option value="">No paired TVs found. Pair one first!</option>';
+          pushBtn.disabled = true;
+          updateTvSpecs(null);
         } else {
           select.innerHTML = tvs
-            .map((tv) => `<option value="${tv.id}">${tv.name}</option>`)
+            .map((tv) => `<option value="${tv.id}">${tv.name || "TV"} (${tv.aspect_ratio || "16:9"})</option>`)
             .join("");
+          pushBtn.disabled = false;
+          updateTvSpecs(tvs[0]);
         }
-      } catch {
+      } catch (err) {
+        console.error("loadTvs error:", err);
         select.innerHTML = '<option value="">Failed to load TVs</option>';
+        showStatus("push-status", `Could not fetch TVs: ${err.message}`, "error");
+        updateTvSpecs(null);
       }
     }
+
+    document.getElementById("tv-select").addEventListener("change", (e) => {
+      const tvId = e.target.value;
+      const tv = tvs.find((t) => t.id === tvId);
+      updateTvSpecs(tv || null);
+    });
+
+    document.getElementById("create-frame-btn").addEventListener("click", () => {
+      if (!selectedTv) return;
+      const w = selectedTv.screen_width || 1920;
+      const h = selectedTv.screen_height || 1080;
+      parent.postMessage({
+        pluginMessage: {
+          type: "create-frame",
+          payload: {
+            width: w,
+            height: h,
+            name: selectedTv.name || "TV",
+          },
+        },
+      }, "*");
+    });
 
     document.getElementById("connect-btn").addEventListener("click", async () => {
       const inputToken = document.getElementById("token-input").value.trim();
       const inputUrl = document.getElementById("app-url-input").value.trim();
-      if (!inputToken) return;
 
-      showStatus("connect-status", "Connecting…", "loading");
+      if (!inputToken) {
+        showStatus("connect-status", "Please paste your API token from the dashboard.", "error");
+        return;
+      }
+      if (!inputUrl) {
+        showStatus("connect-status", "Please enter your App URL.", "error");
+        return;
+      }
+
+      showStatus("connect-status", "Connecting to MenuCast…", "loading");
 
       try {
-        const res = await fetch(`${inputUrl}/api/tv/list`, {
+        const cleanUrl = inputUrl.replace(/\/+$/, "");
+        const res = await fetch(`${cleanUrl}/api/tv/list`, {
           headers: { Authorization: `Bearer ${inputToken}` },
         });
-        if (!res.ok) throw new Error("Invalid token");
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || `HTTP ${res.status}`);
+        }
 
         token = inputToken;
-        appUrl = inputUrl;
-        localStorage.setItem(TOKEN_KEY, token);
-        localStorage.setItem(APP_URL_KEY, appUrl);
+        appUrl = cleanUrl;
+
+        // Save credentials via figma.clientStorage
+        parent.postMessage({
+          pluginMessage: {
+            type: "save-credentials",
+            payload: { token, appUrl },
+          },
+        }, "*");
+
         showPushSection();
-      } catch {
-        showStatus("connect-status", "Connection failed. Check your token.", "error");
+      } catch (err) {
+        console.error("Connect error:", err);
+        showStatus("connect-status", `Connection failed: ${err.message}. Check your token and server.`, "error");
       }
     });
 
     document.getElementById("disconnect-btn").addEventListener("click", () => {
-      localStorage.removeItem(TOKEN_KEY);
       token = "";
       document.getElementById("token-input").value = "";
+      parent.postMessage({ pluginMessage: { type: "clear-credentials" } }, "*");
       showConnectSection();
     });
 
@@ -171,7 +314,7 @@
         showStatus("push-status", "Please select a TV first.", "error");
         return;
       }
-      showStatus("push-status", "Exporting frame…", "loading");
+      showStatus("push-status", "Exporting frame from Figma…", "loading");
       parent.postMessage({
         pluginMessage: {
           type: "export-and-push",
@@ -182,8 +325,24 @@
 
     // Receive messages from plugin main thread
     window.onmessage = async (event) => {
-      const msg = event.data.pluginMessage;
+      const msg = event.data?.pluginMessage;
       if (!msg) return;
+
+      if (msg.type === "init-storage") {
+        if (msg.payload?.appUrl) {
+          appUrl = msg.payload.appUrl;
+          document.getElementById("app-url-input").value = appUrl;
+        }
+        if (msg.payload?.token) {
+          token = msg.payload.token;
+          document.getElementById("token-input").value = token;
+          showPushSection();
+        }
+      }
+
+      if (msg.type === "status-msg") {
+        showStatus("push-status", msg.message, "success");
+      }
 
       if (msg.type === "upload") {
         const { bytes, fileName, tvId, token: t, appUrl: url } = msg.payload;
@@ -191,8 +350,10 @@
         showStatus("push-status", "Uploading menu image…", "loading");
 
         try {
-          // Get signed upload URL
-          const uploadRes = await fetch(`${url}/api/menu/upload`, {
+          const cleanUrl = url.replace(/\/+$/, "");
+
+          // 1. Get signed upload URL
+          const uploadRes = await fetch(`${cleanUrl}/api/menu/upload`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -200,18 +361,28 @@
             },
             body: JSON.stringify({ tv_id: tvId, file_name: fileName, content_type: "image/png" }),
           });
+
+          if (!uploadRes.ok) {
+            const errData = await uploadRes.json().catch(() => ({}));
+            throw new Error(errData.error || `Upload URL request failed (HTTP ${uploadRes.status})`);
+          }
+
           const { upload_url, public_url } = await uploadRes.json();
 
-          // Upload directly to Supabase Storage
-          await fetch(upload_url, {
+          // 2. Upload directly to Supabase Storage
+          const putRes = await fetch(upload_url, {
             method: "PUT",
             headers: { "Content-Type": "image/png" },
             body: new Uint8Array(bytes),
           });
 
-          // Trigger push to TV
-          showStatus("push-status", "Pushing to TV…", "loading");
-          await fetch(`${url}/api/menu/push`, {
+          if (!putRes.ok) {
+            throw new Error(`Storage upload failed (HTTP ${putRes.status})`);
+          }
+
+          // 3. Trigger push to TV
+          showStatus("push-status", "Broadcasting update to TV…", "loading");
+          const pushRes = await fetch(`${cleanUrl}/api/menu/push`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -220,9 +391,15 @@
             body: JSON.stringify({ tv_id: tvId, image_url: public_url }),
           });
 
-          showStatus("push-status", "✓ Menu pushed to TV!", "success");
+          if (!pushRes.ok) {
+            const errData = await pushRes.json().catch(() => ({}));
+            throw new Error(errData.error || `Push trigger failed (HTTP ${pushRes.status})`);
+          }
+
+          showStatus("push-status", "✓ Menu successfully pushed to TV!", "success");
         } catch (err) {
-          showStatus("push-status", `Upload failed: ${err}`, "error");
+          console.error("Upload error:", err);
+          showStatus("push-status", `Push failed: ${err.message}`, "error");
         }
       }
 

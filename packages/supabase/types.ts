@@ -17,6 +17,10 @@ export interface Database {
           pairing_code: string;
           paired_at: string | null;
           current_menu_url: string | null;
+          screen_width?: number | null;
+          screen_height?: number | null;
+          aspect_ratio?: string | null;
+          orientation?: string | null;
           created_at: string;
         };
         Insert: {
@@ -26,6 +30,10 @@ export interface Database {
           pairing_code: string;
           paired_at?: string | null;
           current_menu_url?: string | null;
+          screen_width?: number | null;
+          screen_height?: number | null;
+          aspect_ratio?: string | null;
+          orientation?: string | null;
           created_at?: string;
         };
         Update: {
@@ -35,6 +43,10 @@ export interface Database {
           pairing_code?: string;
           paired_at?: string | null;
           current_menu_url?: string | null;
+          screen_width?: number | null;
+          screen_height?: number | null;
+          aspect_ratio?: string | null;
+          orientation?: string | null;
           created_at?: string;
         };
         Relationships: [];
