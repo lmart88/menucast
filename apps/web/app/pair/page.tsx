@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 
 type PairState = "loading" | "pairing" | "success" | "error";
 
-export default function PairPage() {
+function PairForm() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { data: session, status } = useSession();
@@ -105,5 +105,19 @@ export default function PairPage() {
         </button>
       </div>
     </div>
+  );
+}
+
+export default function PairPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-neutral-950 flex items-center justify-center">
+          <div className="size-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+        </div>
+      }
+    >
+      <PairForm />
+    </Suspense>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { QRCodeSVG } from "qrcode.react";
 
@@ -40,31 +40,266 @@ function getScreenMetadata() {
   };
 }
 
+const PAIRING_CODE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+const PAIRING_STORAGE_KEY = "menucast_tv_pairing";
+const PAIRED_STORAGE_KEY = "menucast_tv_paired_device";
+
+interface StoredPairing {
+  code: string;
+  expiresAt: number;
+}
+
+interface StoredPairedDevice {
+  tv_id: string;
+  name?: string;
+  current_menu_url?: string;
+}
+
+function getStoredPairedDevice(): StoredPairedDevice | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(PAIRED_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed.tv_id === "string") {
+      return parsed;
+    }
+  } catch {
+    // ignore
+  }
+  return null;
+}
+
+function saveStoredPairedDevice(device: StoredPairedDevice) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(PAIRED_STORAGE_KEY, JSON.stringify(device));
+  } catch {
+    // ignore
+  }
+}
+
+function clearStoredPairedDevice() {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.removeItem(PAIRED_STORAGE_KEY);
+  } catch {
+    // ignore
+  }
+}
+
+function getStoredPairing(): StoredPairing | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(PAIRING_STORAGE_KEY);
+    if (!raw) return null;
+    const data: StoredPairing = JSON.parse(raw);
+    if (data.expiresAt > Date.now() && data.code) {
+      return data;
+    }
+    localStorage.removeItem(PAIRING_STORAGE_KEY);
+  } catch {
+    // ignore
+  }
+  return null;
+}
+
+function saveStoredPairing(code: string, expiresAt: number) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(PAIRING_STORAGE_KEY, JSON.stringify({ code, expiresAt }));
+  } catch {
+    // ignore
+  }
+}
+
+function clearStoredPairing() {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.removeItem(PAIRING_STORAGE_KEY);
+  } catch {
+    // ignore
+  }
+}
+
 export default function TvPage() {
   const [state, setState] = useState<TvState>("loading");
   const [pairingCode, setPairingCode] = useState("");
+  const [expiresAt, setExpiresAt] = useState<number>(0);
+  const [timeLeft, setTimeLeft] = useState<number>(600);
   const [tvId, setTvId] = useState("");
   const [tvName, setTvName] = useState("My TV");
   const [menuUrl, setMenuUrl] = useState("");
   const [isFading, setIsFading] = useState(false);
+  const [showControls, setShowControls] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const isInitializingRef = useRef(false);
+  const hideControlsTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const pairUrl = `${appUrl}/pair?code=${pairingCode}`;
 
-  // Step 1: Initialize pairing code
+  const triggerControls = useCallback(() => {
+    setShowControls(true);
+    if (hideControlsTimerRef.current) {
+      clearTimeout(hideControlsTimerRef.current);
+    }
+    hideControlsTimerRef.current = setTimeout(() => {
+      setShowControls(false);
+    }, 5000);
+  }, []);
+
+  const toggleFullscreen = useCallback(async () => {
+    triggerControls();
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+      } else if (document.exitFullscreen) {
+        await document.exitFullscreen();
+      }
+    } catch (err) {
+      console.error("Failed to toggle fullscreen:", err);
+    }
+  }, [triggerControls]);
+
+  // Sync fullscreen state
   useEffect(() => {
-    async function initTv() {
-      try {
-        const res = await fetch("/api/tv/init", { method: "POST" });
-        const data = await res.json();
-        setPairingCode(data.pairing_code);
+    const handleFullscreenChange = () => {
+      setIsFullscreen(Boolean(document.fullscreenElement));
+    };
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+      document.removeEventListener("webkitfullscreenchange", handleFullscreenChange);
+    };
+  }, []);
+
+  // Listen for user interaction (mouse move, keyboard touch, pointer, touch) to reveal controls for 5 seconds
+  useEffect(() => {
+    if (state !== "displaying") return;
+
+    // Show initially when opening displaying state
+    triggerControls();
+
+    const handleActivity = () => {
+      triggerControls();
+    };
+
+    window.addEventListener("mousemove", handleActivity);
+    window.addEventListener("keydown", handleActivity);
+    window.addEventListener("touchstart", handleActivity);
+    window.addEventListener("pointermove", handleActivity);
+
+    return () => {
+      if (hideControlsTimerRef.current) {
+        clearTimeout(hideControlsTimerRef.current);
+      }
+      window.removeEventListener("mousemove", handleActivity);
+      window.removeEventListener("keydown", handleActivity);
+      window.removeEventListener("touchstart", handleActivity);
+      window.removeEventListener("pointermove", handleActivity);
+    };
+  }, [state, triggerControls]);
+
+  // Function to initialize or refresh the pairing code
+  async function initTv(forceNew = false) {
+    if (isInitializingRef.current && !forceNew) return;
+    isInitializingRef.current = true;
+
+    if (!forceNew) {
+      const stored = getStoredPairing();
+      if (stored) {
+        setPairingCode(stored.code);
+        setExpiresAt(stored.expiresAt);
         setState("pairing");
-      } catch (err) {
-        console.error("Failed to init TV:", err);
+        isInitializingRef.current = false;
+        return;
       }
     }
-    initTv();
+
+    try {
+      const res = await fetch("/api/tv/init", { method: "POST" });
+      const data = await res.json();
+      const expiration = Date.now() + PAIRING_CODE_TTL_MS;
+      saveStoredPairing(data.pairing_code, expiration);
+      setPairingCode(data.pairing_code);
+      setExpiresAt(expiration);
+      setState("pairing");
+    } catch (err) {
+      console.error("Failed to init TV:", err);
+    } finally {
+      isInitializingRef.current = false;
+    }
+  }
+
+  // Step 1: On mount, check if this browser is already paired to a TV; if not, init pairing code
+  useEffect(() => {
+    async function checkPairedOrInit() {
+      const storedPaired = getStoredPairedDevice();
+      if (storedPaired?.tv_id) {
+        try {
+          const res = await fetch(`/api/tv/status?tv_id=${encodeURIComponent(storedPaired.tv_id)}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.paired && data.tv_id) {
+              setTvId(data.tv_id);
+              const resolvedName = data.name || storedPaired.name || "My TV";
+              setTvName(resolvedName);
+              const activeMenuUrl = data.current_menu_url || storedPaired.current_menu_url || "";
+              setMenuUrl(activeMenuUrl);
+              saveStoredPairedDevice({
+                tv_id: data.tv_id,
+                name: resolvedName,
+                current_menu_url: activeMenuUrl,
+              });
+              if (activeMenuUrl) {
+                setState("displaying");
+              } else {
+                setState("paired");
+              }
+              return;
+            }
+          }
+        } catch (err) {
+          console.error("Error checking TV status:", err);
+          // If offline/network glitch but we have cached info:
+          if (storedPaired.current_menu_url) {
+            setTvId(storedPaired.tv_id);
+            setTvName(storedPaired.name || "My TV");
+            setMenuUrl(storedPaired.current_menu_url);
+            setState("displaying");
+            return;
+          }
+        }
+
+        // Paired device is no longer valid or was removed
+        clearStoredPairedDevice();
+      }
+
+      initTv();
+    }
+
+    checkPairedOrInit();
   }, []);
+
+  // Step 1b: Manage 10-minute expiration countdown & auto-refresh
+  useEffect(() => {
+    if (state !== "pairing" || !expiresAt) return;
+
+    const interval = setInterval(() => {
+      const remainingSeconds = Math.max(0, Math.floor((expiresAt - Date.now()) / 1000));
+      setTimeLeft(remainingSeconds);
+
+      if (remainingSeconds <= 0) {
+        // 10 minutes elapsed, generate a fresh pairing code
+        initTv(true);
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [state, expiresAt]);
 
   // Step 2: Listen for pairing event (Realtime + fallback polling)
   useEffect(() => {
@@ -81,7 +316,13 @@ export default function TvPage() {
       .on("broadcast", { event: "tv:paired" }, (payload) => {
         const { tv_id, name } = payload.payload as { tv_id: string; name?: string };
         setTvId(tv_id);
-        if (name) setTvName(name);
+        const resolvedName = name || "My TV";
+        if (name) setTvName(resolvedName);
+        clearStoredPairing();
+        saveStoredPairedDevice({
+          tv_id,
+          name: resolvedName,
+        });
         setState("paired");
       })
       .subscribe();
@@ -94,9 +335,17 @@ export default function TvPage() {
           const data = await res.json();
           if (data.paired && data.tv_id) {
             setTvId(data.tv_id);
-            if (data.name) setTvName(data.name);
-            if (data.current_menu_url) {
-              setMenuUrl(data.current_menu_url);
+            const resolvedName = data.name || "My TV";
+            if (data.name) setTvName(resolvedName);
+            clearStoredPairing();
+            const activeMenuUrl = data.current_menu_url || "";
+            saveStoredPairedDevice({
+              tv_id: data.tv_id,
+              name: resolvedName,
+              current_menu_url: activeMenuUrl,
+            });
+            if (activeMenuUrl) {
+              setMenuUrl(activeMenuUrl);
               setState("displaying");
             } else {
               setState("paired");
@@ -140,12 +389,17 @@ export default function TvPage() {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     );
 
-    // 1. Supabase Realtime broadcast listener for menu:push
+    // 1. Supabase Realtime broadcast listener for menu:push & tv:unpaired
     const tvChannel = supabase
       .channel(`tv:${tvId}`)
       .on("broadcast", { event: "menu:push" }, (payload) => {
         const { image_url } = payload.payload as { image_url: string };
         if (image_url) {
+          saveStoredPairedDevice({
+            tv_id: tvId,
+            name: tvName,
+            current_menu_url: image_url,
+          });
           setIsFading(true);
           setTimeout(() => {
             setMenuUrl(image_url);
@@ -154,15 +408,36 @@ export default function TvPage() {
           }, 300);
         }
       })
+      .on("broadcast", { event: "tv:unpaired" }, () => {
+        clearStoredPairedDevice();
+        setTvId("");
+        setMenuUrl("");
+        initTv(true);
+      })
       .subscribe();
 
-    // 2. Fallback polling for menu updates every 3s
+    // 2. Fallback polling for menu updates / unpair status every 3s
     const pollInterval = setInterval(async () => {
       try {
         const res = await fetch(`/api/tv/status?tv_id=${encodeURIComponent(tvId)}`);
         if (res.ok) {
           const data = await res.json();
+          if (!data.paired) {
+            clearStoredPairedDevice();
+            setTvId("");
+            setMenuUrl("");
+            initTv(true);
+            return;
+          }
+          if (data.name && data.name !== tvName) {
+            setTvName(data.name);
+          }
           if (data.current_menu_url && data.current_menu_url !== menuUrl) {
+            saveStoredPairedDevice({
+              tv_id: tvId,
+              name: data.name || tvName,
+              current_menu_url: data.current_menu_url,
+            });
             setIsFading(true);
             setTimeout(() => {
               setMenuUrl(data.current_menu_url);
@@ -170,6 +445,11 @@ export default function TvPage() {
               setState("displaying");
             }, 300);
           }
+        } else if (res.status === 404) {
+          clearStoredPairedDevice();
+          setTvId("");
+          setMenuUrl("");
+          initTv(true);
         }
       } catch (err) {
         console.error("Menu poll error:", err);
@@ -180,7 +460,7 @@ export default function TvPage() {
       clearInterval(pollInterval);
       supabase.removeChannel(tvChannel);
     };
-  }, [tvId, menuUrl]);
+  }, [tvId, tvName, menuUrl]);
 
   if (state === "loading") {
     return (
@@ -192,6 +472,9 @@ export default function TvPage() {
 
   // State 1: Pairing screen with QR code
   if (state === "pairing") {
+    const minutes = Math.floor(timeLeft / 60);
+    const seconds = (timeLeft % 60).toString().padStart(2, "0");
+
     return (
       <div className="min-h-screen bg-neutral-950 text-white flex flex-col items-center justify-center p-8 select-none">
         <div className="text-center space-y-2 mb-8">
@@ -212,6 +495,10 @@ export default function TvPage() {
           <div className="bg-white/5 border border-white/15 rounded-2xl px-8 py-3 inline-block">
             <span className="text-3xl md:text-4xl font-black tracking-[0.2em] font-mono text-emerald-400">{pairingCode}</span>
           </div>
+          <p className="text-xs text-neutral-500 flex items-center justify-center gap-1.5 pt-2">
+            <span className="size-1.5 rounded-full bg-emerald-400/70" />
+            Code valid for <span className="font-mono text-neutral-400">{minutes}:{seconds}</span>
+          </p>
         </div>
       </div>
     );
@@ -251,7 +538,63 @@ export default function TvPage() {
 
   // State 3: Displaying live menu image
   return (
-    <div className="min-h-screen w-screen bg-black flex items-center justify-center overflow-hidden">
+    <div
+      className={`relative min-h-screen w-screen bg-black flex items-center justify-center overflow-hidden select-none transition-all duration-300 ${
+        showControls ? "cursor-default" : "cursor-none"
+      }`}
+      onMouseMove={triggerControls}
+      onClick={triggerControls}
+    >
+      {/* Floating Control Menu Bar (shown on hover / key touch, auto-hidden after 5s) */}
+      <div
+        className={`fixed top-6 inset-x-0 z-50 flex justify-center px-4 pointer-events-none transition-all duration-500 ease-out ${
+          showControls
+            ? "opacity-100 translate-y-0"
+            : "opacity-0 -translate-y-6 pointer-events-none"
+        }`}
+      >
+        <div className="pointer-events-auto flex items-center justify-between gap-4 md:gap-8 bg-neutral-900/85 backdrop-blur-xl border border-white/15 shadow-2xl px-5 py-3 rounded-2xl max-w-lg w-full text-white">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="size-8 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center shrink-0">
+              <span className="size-2 rounded-full bg-emerald-400 animate-pulse" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold text-neutral-400 uppercase tracking-widest leading-tight">
+                MenuCast TV
+              </p>
+              <h2 className="text-sm font-bold text-white truncate leading-tight mt-0.5">
+                {tvName}
+              </h2>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={toggleFullscreen}
+              title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+              className="flex items-center gap-2 bg-white/10 hover:bg-white/20 active:bg-white/25 text-white px-3.5 py-2 rounded-xl text-xs font-semibold tracking-wide transition-colors border border-white/10 cursor-pointer"
+            >
+              {isFullscreen ? (
+                <>
+                  <svg className="size-4 text-neutral-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 9L4 4m0 0h4m-4 0v4m6 6l5 5m0 0h-4m4 0v-4m-11 5l5-5m-5 5v-4m0 4h4m11-11l-5 5m5-5v4m0-4h-4" />
+                  </svg>
+                  <span>Exit Fullscreen</span>
+                </>
+              ) : (
+                <>
+                  <svg className="size-4 text-neutral-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 4h-4m4 0l-5-5" />
+                  </svg>
+                  <span>Fullscreen</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+
       {menuUrl && (
         <img
           key={menuUrl}
