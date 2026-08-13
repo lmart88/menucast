@@ -16,10 +16,12 @@ interface Props {
 }
 
 export default function DashboardClient({ initialTvs, hasToken, userName }: Props) {
-  const [tvs] = useState<TV[]>(initialTvs);
+  const [tvs, setTvs] = useState<TV[]>(initialTvs);
   const [token, setToken] = useState<string | null>(null);
   const [tokenLoading, setTokenLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   async function generateToken() {
     setTokenLoading(true);
@@ -34,6 +36,29 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
     await navigator.clipboard.writeText(token);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  }
+
+  async function deleteTv(tvId: string) {
+    setDeletingId(tvId);
+    try {
+      const res = await fetch("/api/tv/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tv_id: tvId }),
+      });
+
+      if (res.ok) {
+        setTvs((prev) => prev.filter((tv) => tv.id !== tvId));
+        setConfirmDeleteId(null);
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert(`Failed to delete TV: ${err.error || "Unknown error"}`);
+      }
+    } catch (err) {
+      alert("Error deleting TV. Please try again.");
+    } finally {
+      setDeletingId(null);
+    }
   }
 
   return (
@@ -55,7 +80,10 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
       <div className="max-w-4xl mx-auto px-6 py-10 space-y-10">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-semibold">Your TVs</h1>
+          <div>
+            <h1 className="text-2xl font-semibold">Your TVs</h1>
+            <p className="text-sm text-neutral-400 mt-1">Manage connected screens and push menus</p>
+          </div>
           <Link
             href="/tv"
             target="_blank"
@@ -85,31 +113,78 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {tvs.map((tv) => {
               const lastMenu = tv.menus?.[0];
+              const isDeleting = deletingId === tv.id;
+              const isConfirming = confirmDeleteId === tv.id;
+
               return (
                 <div
                   key={tv.id}
-                  className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden hover:border-white/20 transition-colors"
+                  className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden hover:border-white/20 transition-all flex flex-col justify-between"
                 >
                   {/* Thumbnail */}
-                  <div className="aspect-video bg-neutral-900 flex items-center justify-center overflow-hidden">
-                    {lastMenu?.image_url ? (
+                  <div className="aspect-video bg-neutral-900 flex items-center justify-center overflow-hidden relative">
+                    {tv.current_menu_url || lastMenu?.image_url ? (
                       <img
-                        src={lastMenu.image_url}
+                        src={tv.current_menu_url || lastMenu?.image_url || ""}
                         alt="Menu"
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <span className="text-neutral-600 text-sm">No menu pushed yet</span>
+                      <div className="text-center p-4">
+                        <span className="text-2xl block mb-1">🖼️</span>
+                        <span className="text-neutral-500 text-xs">No menu pushed yet</span>
+                      </div>
                     )}
+
+                    <div className="absolute top-2 right-2">
+                      <span className="bg-black/60 backdrop-blur-md text-[11px] px-2.5 py-1 rounded-full text-emerald-400 border border-emerald-500/20 font-mono">
+                        {tv.pairing_code}
+                      </span>
+                    </div>
                   </div>
-                  {/* Info */}
-                  <div className="p-4 space-y-1">
-                    <h3 className="font-medium">{tv.name}</h3>
-                    <p className="text-xs text-neutral-500">
-                      {lastMenu
-                        ? `Last updated ${new Date(lastMenu.pushed_at).toLocaleDateString()}`
-                        : "Paired · Awaiting first push"}
-                    </p>
+
+                  {/* Info & Actions */}
+                  <div className="p-4 flex items-center justify-between border-t border-white/5">
+                    <div className="space-y-0.5">
+                      <h3 className="font-medium text-sm text-white">{tv.name}</h3>
+                      <p className="text-xs text-neutral-500">
+                        {tv.current_menu_url || lastMenu
+                          ? `Live Menu Active`
+                          : "Paired · Awaiting push"}
+                      </p>
+                    </div>
+
+                    {/* Delete Action with Confirmation */}
+                    <div>
+                      {isConfirming ? (
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={() => deleteTv(tv.id)}
+                            disabled={isDeleting}
+                            className="bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 px-2.5 py-1 rounded-md text-xs font-medium transition-colors disabled:opacity-50"
+                          >
+                            {isDeleting ? "Deleting…" : "Confirm"}
+                          </button>
+                          <button
+                            onClick={() => setConfirmDeleteId(null)}
+                            disabled={isDeleting}
+                            className="text-neutral-400 hover:text-white px-2 py-1 text-xs"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setConfirmDeleteId(tv.id)}
+                          className="text-neutral-500 hover:text-red-400 p-1.5 rounded-lg hover:bg-red-500/10 transition-colors"
+                          title="Delete TV"
+                        >
+                          <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               );

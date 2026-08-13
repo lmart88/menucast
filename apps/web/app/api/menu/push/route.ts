@@ -18,6 +18,45 @@ async function getUserFromToken(token: string, supabase: ReturnType<typeof creat
   return data?.user_id ?? null;
 }
 
+async function broadcastEvent(
+  supabase: ReturnType<typeof createClient<Database>>,
+  channelName: string,
+  event: string,
+  payload: Record<string, unknown>
+) {
+  return new Promise<void>((resolve) => {
+    const channel = supabase.channel(channelName);
+    const timeout = setTimeout(() => {
+      supabase.removeChannel(channel);
+      resolve();
+    }, 2000);
+
+    channel.subscribe((status) => {
+      if (status === "SUBSCRIBED") {
+        channel.send({
+          type: "broadcast",
+          event,
+          payload,
+        }).then(() => {
+          setTimeout(() => {
+            clearTimeout(timeout);
+            supabase.removeChannel(channel);
+            resolve();
+          }, 200);
+        }).catch(() => {
+          clearTimeout(timeout);
+          supabase.removeChannel(channel);
+          resolve();
+        });
+      }
+    });
+  });
+}
+
+export async function OPTIONS() {
+  return new Response(null, { status: 200 });
+}
+
 export async function POST(req: NextRequest) {
   const supabase = createClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -39,6 +78,10 @@ export async function POST(req: NextRequest) {
   }
 
   const { tv_id, image_url } = await req.json();
+
+  if (!tv_id || !image_url) {
+    return NextResponse.json({ error: "tv_id and image_url are required" }, { status: 400 });
+  }
 
   // Verify TV belongs to user
   const { data: tv, error: tvError } = await supabase
@@ -69,11 +112,11 @@ export async function POST(req: NextRequest) {
     .update({ current_menu_url: image_url })
     .eq("id", tv_id);
 
-  // 🔴 Broadcast to TV via Supabase Realtime
-  await supabase.channel(`tv:${tv_id}`).send({
-    type: "broadcast",
-    event: "menu:push",
-    payload: { image_url, menu_id: menu.id, pushed_at: menu.pushed_at },
+  // 🔴 Broadcast to TV via Supabase Realtime channel
+  await broadcastEvent(supabase, `tv:${tv_id}`, "menu:push", {
+    image_url,
+    menu_id: menu.id,
+    pushed_at: menu.pushed_at,
   });
 
   return NextResponse.json({ success: true, menu });

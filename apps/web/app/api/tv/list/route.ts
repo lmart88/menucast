@@ -21,6 +21,10 @@ async function getUserFromToken(token: string, supabase: ReturnType<typeof creat
   return data?.user_id ?? null;
 }
 
+export async function OPTIONS() {
+  return new Response(null, { status: 200 });
+}
+
 export async function GET(req: NextRequest) {
   const supabase = createClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
