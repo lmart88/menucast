@@ -1,0 +1,13 @@
+{
+  "name": "@menucast/figma-plugin",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "build": "tsc && node scripts/bundle-ui.js",
+    "watch": "tsc --watch"
+  },
+  "devDependencies": {
+    "@figma/plugin-typings": "^1.104.0",
+    "typescript": "^5.0.0"
+  }
+}

@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MenuCast</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #0a0a0a;
+      color: #fff;
+      padding: 20px;
+      font-size: 13px;
+    }
+    h1 { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+    p { color: #666; font-size: 12px; line-height: 1.5; }
+    label { display: block; font-size: 12px; color: #888; margin-bottom: 6px; margin-top: 16px; }
+    input, select {
+      width: 100%; padding: 8px 10px;
+      background: #1a1a1a; border: 1px solid #2a2a2a;
+      border-radius: 8px; color: #fff; font-size: 12px;
+      outline: none;
+    }
+    input:focus, select:focus { border-color: #444; }
+    button {
+      width: 100%; padding: 10px;
+      border-radius: 8px; border: none;
+      font-size: 13px; font-weight: 600; cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-primary { background: #fff; color: #000; }
+    .btn-primary:hover:not(:disabled) { background: #e5e5e5; }
+    .btn-secondary {
+      background: #1a1a1a; color: #fff;
+      border: 1px solid #2a2a2a; margin-top: 8px;
+    }
+    .status {
+      margin-top: 14px; padding: 10px 12px;
+      border-radius: 8px; font-size: 12px;
+    }
+    .status.success { background: rgba(52,199,89,0.1); color: #34c759; border: 1px solid rgba(52,199,89,0.2); }
+    .status.error { background: rgba(255,69,58,0.1); color: #ff453a; border: 1px solid rgba(255,69,58,0.2); }
+    .status.loading { background: rgba(255,255,255,0.05); color: #888; border: 1px solid #2a2a2a; }
+    .divider { border: none; border-top: 1px solid #1a1a1a; margin: 16px 0; }
+    .section { display: none; }
+    .section.visible { display: block; }
+  </style>
+</head>
+<body>
+  <h1>MenuCast</h1>
+  <p>Push your Figma menu to your restaurant TV</p>
+
+  <!-- Connect section -->
+  <div id="connect-section" class="section visible">
+    <label for="token-input">API Token</label>
+    <input id="token-input" type="password" placeholder="Paste your token from menucast.app" />
+
+    <label for="app-url-input">App URL</label>
+    <input id="app-url-input" type="text" value="https://menucast.app" />
+
+    <div style="margin-top: 16px">
+      <button class="btn-primary" id="connect-btn">Connect</button>
+    </div>
+    <div id="connect-status"></div>
+  </div>
+
+  <!-- Push section -->
+  <div id="push-section" class="section">
+    <label for="tv-select">Target TV</label>
+    <select id="tv-select">
+      <option value="">Loading your TVs…</option>
+    </select>
+
+    <div style="margin-top: 16px">
+      <button class="btn-primary" id="push-btn">Push Current Frame to TV</button>
+      <button class="btn-secondary" id="disconnect-btn">Disconnect</button>
+    </div>
+    <div id="push-status"></div>
+  </div>
+
+  <script>
+    const APP_URL_KEY = "menucast_app_url";
+    const TOKEN_KEY = "menucast_token";
+
+    let token = "";
+    let appUrl = "";
+    let tvs = [];
+
+    // Restore saved state
+    const savedToken = localStorage.getItem(TOKEN_KEY);
+    const savedUrl = localStorage.getItem(APP_URL_KEY) || "https://menucast.app";
+    document.getElementById("app-url-input").value = savedUrl;
+    if (savedToken) {
+      token = savedToken;
+      appUrl = savedUrl;
+      showPushSection();
+    }
+
+    function showStatus(elId, msg, type) {
+      const el = document.getElementById(elId);
+      el.innerHTML = `<div class="status ${type}">${msg}</div>`;
+    }
+
+    function showConnectSection() {
+      document.getElementById("connect-section").classList.add("visible");
+      document.getElementById("push-section").classList.remove("visible");
+    }
+
+    function showPushSection() {
+      document.getElementById("connect-section").classList.remove("visible");
+      document.getElementById("push-section").classList.add("visible");
+      loadTvs();
+    }
+
+    async function loadTvs() {
+      const select = document.getElementById("tv-select");
+      select.innerHTML = '<option value="">Loading…</option>';
+      try {
+        const res = await fetch(`${appUrl}/api/tv/list`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        tvs = data.tvs || [];
+        if (tvs.length === 0) {
+          select.innerHTML = '<option value="">No TVs found — pair one first</option>';
+        } else {
+          select.innerHTML = tvs
+            .map((tv) => `<option value="${tv.id}">${tv.name}</option>`)
+            .join("");
+        }
+      } catch {
+        select.innerHTML = '<option value="">Failed to load TVs</option>';
+      }
+    }
+
+    document.getElementById("connect-btn").addEventListener("click", async () => {
+      const inputToken = document.getElementById("token-input").value.trim();
+      const inputUrl = document.getElementById("app-url-input").value.trim();
+      if (!inputToken) return;
+
+      showStatus("connect-status", "Connecting…", "loading");
+
+      try {
+        const res = await fetch(`${inputUrl}/api/tv/list`, {
+          headers: { Authorization: `Bearer ${inputToken}` },
+        });
+        if (!res.ok) throw new Error("Invalid token");
+
+        token = inputToken;
+        appUrl = inputUrl;
+        localStorage.setItem(TOKEN_KEY, token);
+        localStorage.setItem(APP_URL_KEY, appUrl);
+        showPushSection();
+      } catch {
+        showStatus("connect-status", "Connection failed. Check your token.", "error");
+      }
+    });
+
+    document.getElementById("disconnect-btn").addEventListener("click", () => {
+      localStorage.removeItem(TOKEN_KEY);
+      token = "";
+      document.getElementById("token-input").value = "";
+      showConnectSection();
+    });
+
+    document.getElementById("push-btn").addEventListener("click", () => {
+      const tvId = document.getElementById("tv-select").value;
+      if (!tvId) {
+        showStatus("push-status", "Please select a TV first.", "error");
+        return;
+      }
+      showStatus("push-status", "Exporting frame…", "loading");
+      parent.postMessage({
+        pluginMessage: {
+          type: "export-and-push",
+          payload: { tvId, token, appUrl },
+        },
+      }, "*");
+    });
+
+    // Receive messages from plugin main thread
+    window.onmessage = async (event) => {
+      const msg = event.data.pluginMessage;
+      if (!msg) return;
+
+      if (msg.type === "upload") {
+        const { bytes, fileName, tvId, token: t, appUrl: url } = msg.payload;
+
+        showStatus("push-status", "Uploading menu image…", "loading");
+
+        try {
+          // Get signed upload URL
+          const uploadRes = await fetch(`${url}/api/menu/upload`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${t}`,
+            },
+            body: JSON.stringify({ tv_id: tvId, file_name: fileName, content_type: "image/png" }),
+          });
+          const { upload_url, public_url } = await uploadRes.json();
+
+          // Upload directly to Supabase Storage
+          await fetch(upload_url, {
+            method: "PUT",
+            headers: { "Content-Type": "image/png" },
+            body: new Uint8Array(bytes),
+          });
+
+          // Trigger push to TV
+          showStatus("push-status", "Pushing to TV…", "loading");
+          await fetch(`${url}/api/menu/push`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${t}`,
+            },
+            body: JSON.stringify({ tv_id: tvId, image_url: public_url }),
+          });
+
+          showStatus("push-status", "✓ Menu pushed to TV!", "success");
+        } catch (err) {
+          showStatus("push-status", `Upload failed: ${err}`, "error");
+        }
+      }
+
+      if (msg.type === "error") {
+        showStatus("push-status", msg.message, "error");
+      }
+    };
+  </script>
+</body>
+</html>
