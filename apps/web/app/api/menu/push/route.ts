@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { tv_id, image_url } = await req.json();
+  const { tv_id, image_url, menu_mode = "static", menu_data = null } = await req.json();
 
   if (!tv_id || !image_url) {
     return NextResponse.json({ error: "tv_id and image_url are required" }, { status: 400 });
@@ -96,27 +96,59 @@ export async function POST(req: NextRequest) {
   }
 
   // Record the push
-  const { data: menu, error: menuError } = await supabase
+  let menu: any = null;
+  const { data: menuInsert, error: menuError } = await supabase
     .from("menus")
-    .insert({ tv_id, image_url, pushed_by: userId })
+    .insert({
+      tv_id,
+      image_url,
+      menu_mode,
+      menu_data,
+      pushed_by: userId,
+    })
     .select()
     .single();
 
   if (menuError) {
-    return NextResponse.json({ error: menuError.message }, { status: 500 });
+    if (menuError.message?.includes("schema cache") || menuError.message?.includes("menu_data") || menuError.message?.includes("menu_mode")) {
+      // Fallback insert if columns not yet added to menus table
+      const fallback = await supabase
+        .from("menus")
+        .insert({ tv_id, image_url, pushed_by: userId })
+        .select()
+        .single();
+      menu = fallback.data;
+    } else {
+      return NextResponse.json({ error: menuError.message }, { status: 500 });
+    }
+  } else {
+    menu = menuInsert;
   }
 
-  // Update TV's current menu
-  await supabase
+  // Update TV's current menu (with fallback if columns not yet in tvs table)
+  const { error: tvUpdateError } = await supabase
     .from("tvs")
-    .update({ current_menu_url: image_url })
+    .update({
+      current_menu_url: image_url,
+      menu_mode,
+      menu_data,
+    })
     .eq("id", tv_id);
+
+  if (tvUpdateError && (tvUpdateError.message?.includes("schema cache") || tvUpdateError.message?.includes("menu_data"))) {
+    await supabase
+      .from("tvs")
+      .update({ current_menu_url: image_url })
+      .eq("id", tv_id);
+  }
 
   // 🔴 Broadcast to TV via Supabase Realtime channel
   await broadcastEvent(supabase, `tv:${tv_id}`, "menu:push", {
     image_url,
-    menu_id: menu.id,
-    pushed_at: menu.pushed_at,
+    menu_mode,
+    menu_data,
+    menu_id: menu?.id,
+    pushed_at: menu?.pushed_at || new Date().toISOString(),
   });
 
   return NextResponse.json({ success: true, menu });

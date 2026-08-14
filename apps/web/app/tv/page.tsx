@@ -1,10 +1,69 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { QRCodeSVG } from "qrcode.react";
 
 type TvState = "loading" | "pairing" | "paired" | "displaying";
+type MenuMode = "static" | "hybrid" | "responsive";
+
+interface HybridElement {
+  id: string;
+  name: string;
+  text: string;
+  isPrice?: boolean;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  fontSize: number;
+  fontFamily: string;
+  fontWeight: number;
+  color: string;
+  textAlign?: string;
+  letterSpacing?: string;
+  lineHeight?: string;
+  opacity?: number;
+}
+
+interface ResponsiveNode {
+  id: string;
+  type: "frame" | "text" | "box";
+  name: string;
+  layoutMode?: "row" | "column" | "none";
+  gap?: number;
+  padding?: { top: number; right: number; bottom: number; left: number };
+  alignItems?: string;
+  justifyContent?: string;
+  flexGrow?: number;
+  width?: number | "auto" | "100%";
+  height?: number | "auto" | "100%";
+  backgroundColor?: string;
+  borderRadius?: number;
+  border?: string;
+  text?: string;
+  fieldId?: string;
+  fontSize?: number;
+  fontFamily?: string;
+  fontWeight?: number;
+  color?: string;
+  textAlign?: string;
+  children?: ResponsiveNode[];
+}
+
+interface MenuData {
+  mode: MenuMode;
+  canvas?: {
+    width: number;
+    height: number;
+    backgroundColor?: string;
+  };
+  bg_image_url?: string;
+  fonts?: string[];
+  elements?: HybridElement[];
+  fields?: Record<string, { label: string; value: string; isPrice?: boolean }>;
+  tree?: ResponsiveNode;
+}
 
 function getScreenMetadata() {
   if (typeof window === "undefined") return null;
@@ -14,7 +73,6 @@ function getScreenMetadata() {
   const height = Math.round((window.screen?.height || window.innerHeight) * (dpr > 1 ? dpr : 1));
   const orientation = width >= height ? "Landscape" : "Portrait";
 
-  // Greatest common divisor
   function gcd(a: number, b: number): number {
     return b === 0 ? a : gcd(b, a % b);
   }
@@ -22,7 +80,6 @@ function getScreenMetadata() {
   const ratioW = Math.round(width / divisor);
   const ratioH = Math.round(height / divisor);
 
-  // Common standard ratios for clean display
   const dec = width / height;
   let standardRatio = `${ratioW}:${ratioH}`;
   if (Math.abs(dec - 16 / 9) < 0.05) standardRatio = "16:9";
@@ -53,6 +110,8 @@ interface StoredPairedDevice {
   tv_id: string;
   name?: string;
   current_menu_url?: string;
+  menu_mode?: MenuMode;
+  menu_data?: MenuData | null;
 }
 
 function getStoredPairedDevice(): StoredPairedDevice | null {
@@ -122,6 +181,82 @@ function clearStoredPairing() {
   }
 }
 
+// ----------------------------------------------------
+// Recursive Component for Responsive AutoLayout Nodes
+// ----------------------------------------------------
+function ResponsiveNodeView({
+  node,
+  fields,
+}: {
+  node: ResponsiveNode;
+  fields: Record<string, { label: string; value: string; isPrice?: boolean }>;
+}) {
+  if (node.type === "text") {
+    const currentVal = (node.fieldId && fields[node.fieldId]?.value) ?? node.text ?? "";
+    return (
+      <div
+        style={{
+          fontFamily: node.fontFamily || "inherit",
+          fontSize: node.fontSize ? `${node.fontSize}px` : "16px",
+          fontWeight: node.fontWeight || 400,
+          color: node.color || "#ffffff",
+          textAlign: (node.textAlign as any) || "left",
+          lineHeight: 1.25,
+          whiteSpace: "pre-wrap",
+          wordBreak: "break-word",
+        }}
+      >
+        {currentVal}
+      </div>
+    );
+  }
+
+  if (node.type === "box") {
+    return (
+      <div
+        style={{
+          width: node.width ? `${node.width}px` : "auto",
+          height: node.height ? `${node.height}px` : "auto",
+          backgroundColor: node.backgroundColor || "transparent",
+          borderRadius: node.borderRadius ? `${node.borderRadius}px` : "0px",
+          flexShrink: 0,
+        }}
+      />
+    );
+  }
+
+  // Frame / Container
+  const isFlex = node.layoutMode === "row" || node.layoutMode === "column";
+  return (
+    <div
+      style={{
+        display: isFlex ? "flex" : "block",
+        flexDirection: node.layoutMode === "row" ? "row" : node.layoutMode === "column" ? "column" : undefined,
+        gap: node.gap ? `${node.gap}px` : undefined,
+        paddingTop: node.padding?.top ? `${node.padding.top}px` : undefined,
+        paddingRight: node.padding?.right ? `${node.padding.right}px` : undefined,
+        paddingBottom: node.padding?.bottom ? `${node.padding.bottom}px` : undefined,
+        paddingLeft: node.padding?.left ? `${node.padding.left}px` : undefined,
+        alignItems: node.alignItems || undefined,
+        justifyContent: node.justifyContent || undefined,
+        flexGrow: node.flexGrow || 0,
+        backgroundColor: node.backgroundColor || undefined,
+        borderRadius: node.borderRadius ? `${node.borderRadius}px` : undefined,
+        border: node.border || undefined,
+        boxSizing: "border-box",
+        position: "relative",
+      }}
+    >
+      {node.children?.map((child) => (
+        <ResponsiveNodeView key={child.id} node={child} fields={fields} />
+      ))}
+    </div>
+  );
+}
+
+// ----------------------------------------------------
+// Main TV Page Component
+// ----------------------------------------------------
 export default function TvPage() {
   const [state, setState] = useState<TvState>("loading");
   const [pairingCode, setPairingCode] = useState("");
@@ -130,14 +265,56 @@ export default function TvPage() {
   const [tvId, setTvId] = useState("");
   const [tvName, setTvName] = useState("My TV");
   const [menuUrl, setMenuUrl] = useState("");
+  const [menuMode, setMenuMode] = useState<MenuMode>("static");
+  const [menuData, setMenuData] = useState<MenuData | null>(null);
   const [isFading, setIsFading] = useState(false);
   const [showControls, setShowControls] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [windowDimensions, setWindowDimensions] = useState({ width: 1920, height: 1080 });
+
   const isInitializingRef = useRef(false);
   const hideControlsTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const pairUrl = `${appUrl}/pair?code=${pairingCode}`;
+
+  // Track window dimensions for scale calculation
+  useEffect(() => {
+    function handleResize() {
+      setWindowDimensions({
+        width: window.innerWidth,
+        height: window.innerHeight,
+      });
+    }
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // Dynamically load Google Fonts referenced in menuData
+  useEffect(() => {
+    if (!menuData?.fonts || menuData.fonts.length === 0) return;
+    const validFonts = menuData.fonts.filter(
+      (f: string) => f && f !== "sans-serif" && f !== "serif" && f !== "monospace"
+    );
+    if (validFonts.length === 0) return;
+
+    try {
+      const families = validFonts
+        .map((f: string) => encodeURIComponent(f).replace(/%20/g, "+") + ":wght@300;400;500;600;700;800;900")
+        .join("&family=");
+      const fontUrl = `https://fonts.googleapis.com/css2?family=${families}&display=swap`;
+      let link = document.querySelector(`link[href="${fontUrl}"]`) as HTMLLinkElement;
+      if (!link) {
+        link = document.createElement("link");
+        link.rel = "stylesheet";
+        link.href = fontUrl;
+        document.head.appendChild(link);
+      }
+    } catch (e) {
+      console.error("Failed to load Google Fonts:", e);
+    }
+  }, [menuData]);
 
   const triggerControls = useCallback(() => {
     setShowControls(true);
@@ -176,11 +353,10 @@ export default function TvPage() {
     };
   }, []);
 
-  // Listen for user interaction (mouse move, keyboard touch, pointer, touch) to reveal controls for 5 seconds
+  // Listen for user interaction to reveal controls
   useEffect(() => {
     if (state !== "displaying") return;
 
-    // Show initially when opening displaying state
     triggerControls();
 
     const handleActivity = () => {
@@ -203,7 +379,7 @@ export default function TvPage() {
     };
   }, [state, triggerControls]);
 
-  // Function to initialize or refresh the pairing code
+  // Initialize or refresh pairing code
   async function initTv(forceNew = false) {
     if (isInitializingRef.current && !forceNew) return;
     isInitializingRef.current = true;
@@ -234,7 +410,7 @@ export default function TvPage() {
     }
   }
 
-  // Step 1: On mount, check if this browser is already paired to a TV; if not, init pairing code
+  // Step 1: Check if already paired
   useEffect(() => {
     async function checkPairedOrInit() {
       const storedPaired = getStoredPairedDevice();
@@ -248,13 +424,22 @@ export default function TvPage() {
               const resolvedName = data.name || storedPaired.name || "My TV";
               setTvName(resolvedName);
               const activeMenuUrl = data.current_menu_url || storedPaired.current_menu_url || "";
+              const activeMode = (data.menu_mode || storedPaired.menu_mode || "static") as MenuMode;
+              const activeData = (data.menu_data || storedPaired.menu_data || null) as MenuData | null;
+
               setMenuUrl(activeMenuUrl);
+              setMenuMode(activeMode);
+              setMenuData(activeData);
+
               saveStoredPairedDevice({
                 tv_id: data.tv_id,
                 name: resolvedName,
                 current_menu_url: activeMenuUrl,
+                menu_mode: activeMode,
+                menu_data: activeData,
               });
-              if (activeMenuUrl) {
+
+              if (activeMenuUrl || (activeMode === "responsive" && activeData)) {
                 setState("displaying");
               } else {
                 setState("paired");
@@ -264,17 +449,17 @@ export default function TvPage() {
           }
         } catch (err) {
           console.error("Error checking TV status:", err);
-          // If offline/network glitch but we have cached info:
           if (storedPaired.current_menu_url) {
             setTvId(storedPaired.tv_id);
             setTvName(storedPaired.name || "My TV");
             setMenuUrl(storedPaired.current_menu_url);
+            setMenuMode(storedPaired.menu_mode || "static");
+            setMenuData(storedPaired.menu_data || null);
             setState("displaying");
             return;
           }
         }
 
-        // Paired device is no longer valid or was removed
         clearStoredPairedDevice();
       }
 
@@ -284,7 +469,7 @@ export default function TvPage() {
     checkPairedOrInit();
   }, []);
 
-  // Step 1b: Manage 10-minute expiration countdown & auto-refresh
+  // Step 1b: 10-minute countdown
   useEffect(() => {
     if (state !== "pairing" || !expiresAt) return;
 
@@ -293,7 +478,6 @@ export default function TvPage() {
       setTimeLeft(remainingSeconds);
 
       if (remainingSeconds <= 0) {
-        // 10 minutes elapsed, generate a fresh pairing code
         initTv(true);
       }
     }, 1000);
@@ -301,7 +485,7 @@ export default function TvPage() {
     return () => clearInterval(interval);
   }, [state, expiresAt]);
 
-  // Step 2: Listen for pairing event (Realtime + fallback polling)
+  // Step 2: Listen for pairing event
   useEffect(() => {
     if (!pairingCode || state !== "pairing") return;
 
@@ -310,7 +494,6 @@ export default function TvPage() {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     );
 
-    // 1. Supabase Realtime broadcast listener
     const pairingChannel = supabase
       .channel(`pairing:${pairingCode}`)
       .on("broadcast", { event: "tv:paired" }, (payload) => {
@@ -327,7 +510,6 @@ export default function TvPage() {
       })
       .subscribe();
 
-    // 2. Fallback polling every 2s
     const pollInterval = setInterval(async () => {
       try {
         const res = await fetch(`/api/tv/status?code=${encodeURIComponent(pairingCode)}`);
@@ -339,12 +521,21 @@ export default function TvPage() {
             if (data.name) setTvName(resolvedName);
             clearStoredPairing();
             const activeMenuUrl = data.current_menu_url || "";
+            const activeMode = (data.menu_mode || "static") as MenuMode;
+            const activeData = (data.menu_data || null) as MenuData | null;
+
             saveStoredPairedDevice({
               tv_id: data.tv_id,
               name: resolvedName,
               current_menu_url: activeMenuUrl,
+              menu_mode: activeMode,
+              menu_data: activeData,
             });
-            if (activeMenuUrl) {
+
+            setMenuMode(activeMode);
+            setMenuData(activeData);
+
+            if (activeMenuUrl || (activeMode === "responsive" && activeData)) {
               setMenuUrl(activeMenuUrl);
               setState("displaying");
             } else {
@@ -363,7 +554,7 @@ export default function TvPage() {
     };
   }, [pairingCode, state]);
 
-  // Step 3: When tvId is known, report screen metadata (resolution, aspect ratio, orientation)
+  // Step 3: Screen metadata
   useEffect(() => {
     if (!tvId) return;
 
@@ -380,7 +571,7 @@ export default function TvPage() {
     }).catch((err) => console.error("Error reporting screen info:", err));
   }, [tvId]);
 
-  // Step 4: Listen for menu pushes once paired (Realtime + fallback polling)
+  // Step 4: Listen for menu pushes and live data updates
   useEffect(() => {
     if (!tvId) return;
 
@@ -389,23 +580,43 @@ export default function TvPage() {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     );
 
-    // 1. Supabase Realtime broadcast listener for menu:push & tv:unpaired
     const tvChannel = supabase
       .channel(`tv:${tvId}`)
       .on("broadcast", { event: "menu:push" }, (payload) => {
-        const { image_url } = payload.payload as { image_url: string };
-        if (image_url) {
+        const { image_url, menu_mode: mode = "static", menu_data: data = null } = payload.payload as {
+          image_url: string;
+          menu_mode?: MenuMode;
+          menu_data?: MenuData | null;
+        };
+
+        saveStoredPairedDevice({
+          tv_id: tvId,
+          name: tvName,
+          current_menu_url: image_url,
+          menu_mode: mode,
+          menu_data: data,
+        });
+
+        setIsFading(true);
+        setTimeout(() => {
+          setMenuUrl(image_url);
+          setMenuMode(mode);
+          setMenuData(data);
+          setIsFading(false);
+          setState("displaying");
+        }, 300);
+      })
+      .on("broadcast", { event: "menu:data-update" }, (payload) => {
+        const { menu_data: updatedData } = payload.payload as { menu_data: MenuData };
+        if (updatedData) {
+          setMenuData(updatedData);
           saveStoredPairedDevice({
             tv_id: tvId,
             name: tvName,
-            current_menu_url: image_url,
+            current_menu_url: menuUrl,
+            menu_mode: menuMode,
+            menu_data: updatedData,
           });
-          setIsFading(true);
-          setTimeout(() => {
-            setMenuUrl(image_url);
-            setIsFading(false);
-            setState("displaying");
-          }, 300);
         }
       })
       .on("broadcast", { event: "tv:unpaired" }, () => {
@@ -416,7 +627,6 @@ export default function TvPage() {
       })
       .subscribe();
 
-    // 2. Fallback polling for menu updates / unpair status every 3s
     const pollInterval = setInterval(async () => {
       try {
         const res = await fetch(`/api/tv/status?tv_id=${encodeURIComponent(tvId)}`);
@@ -432,15 +642,26 @@ export default function TvPage() {
           if (data.name && data.name !== tvName) {
             setTvName(data.name);
           }
-          if (data.current_menu_url && data.current_menu_url !== menuUrl) {
+          if (
+            (data.current_menu_url && data.current_menu_url !== menuUrl) ||
+            data.menu_mode !== menuMode
+          ) {
+            const nextMode = (data.menu_mode || "static") as MenuMode;
+            const nextData = (data.menu_data || null) as MenuData | null;
+
             saveStoredPairedDevice({
               tv_id: tvId,
               name: data.name || tvName,
               current_menu_url: data.current_menu_url,
+              menu_mode: nextMode,
+              menu_data: nextData,
             });
+
             setIsFading(true);
             setTimeout(() => {
               setMenuUrl(data.current_menu_url);
+              setMenuMode(nextMode);
+              setMenuData(nextData);
               setIsFading(false);
               setState("displaying");
             }, 300);
@@ -448,11 +669,10 @@ export default function TvPage() {
         } else if (res.status === 404) {
           clearStoredPairedDevice();
           setTvId("");
-          setMenuUrl("");
           initTv(true);
         }
       } catch (err) {
-        console.error("Menu poll error:", err);
+        console.error("Status check error:", err);
       }
     }, 3000);
 
@@ -460,43 +680,77 @@ export default function TvPage() {
       clearInterval(pollInterval);
       supabase.removeChannel(tvChannel);
     };
-  }, [tvId, tvName, menuUrl]);
+  }, [tvId, tvName, menuUrl, menuMode]);
 
+  // Calculate canvas scaling for Hybrid & Responsive modes
+  const canvasScale = useMemo(() => {
+    const canvasWidth = menuData?.canvas?.width || 1920;
+    const canvasHeight = menuData?.canvas?.height || 1080;
+    const scaleX = windowDimensions.width / canvasWidth;
+    const scaleY = windowDimensions.height / canvasHeight;
+    return Math.min(scaleX, scaleY);
+  }, [menuData, windowDimensions]);
+
+  // Format time remaining
+  const minutes = String(Math.floor(timeLeft / 60)).padStart(2, "0");
+  const seconds = String(timeLeft % 60).padStart(2, "0");
+
+  // State 0: Loading
   if (state === "loading") {
     return (
-      <div className="min-h-screen bg-neutral-950 flex items-center justify-center">
-        <div className="size-10 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="size-8 rounded-full border-2 border-emerald-400 border-t-transparent animate-spin" />
       </div>
     );
   }
 
-  // State 1: Pairing screen with QR code
+  // State 1: Pairing Screen
   if (state === "pairing") {
-    const minutes = Math.floor(timeLeft / 60);
-    const seconds = (timeLeft % 60).toString().padStart(2, "0");
-
     return (
       <div className="min-h-screen bg-neutral-950 text-white flex flex-col items-center justify-center p-8 select-none">
-        <div className="text-center space-y-2 mb-8">
-          <div className="inline-flex items-center gap-2 bg-white/10 px-3 py-1 rounded-full text-xs uppercase tracking-widest text-neutral-300 font-semibold mb-2">
-            <span className="size-2 rounded-full bg-emerald-400 animate-pulse" />
-            MenuCast TV Display
-          </div>
-          <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Pair this TV to your account</h1>
-          <p className="text-neutral-400 text-base">Scan the QR code with your phone camera to connect</p>
+        <div className="fixed top-8 left-8 flex items-center gap-3">
+          <div className="size-3 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="text-sm font-semibold tracking-wider uppercase text-neutral-400">
+            MenuCast TV Player
+          </span>
         </div>
 
-        <div className="bg-white p-6 rounded-3xl shadow-2xl transition-transform hover:scale-105 duration-300">
-          <QRCodeSVG value={pairUrl} size={220} level="M" />
-        </div>
-
-        <div className="text-center space-y-3 mt-8">
-          <p className="text-sm text-neutral-500">Or visit <span className="text-neutral-300 font-mono">{appUrl}/pair</span> and enter:</p>
-          <div className="bg-white/5 border border-white/15 rounded-2xl px-8 py-3 inline-block">
-            <span className="text-3xl md:text-4xl font-black tracking-[0.2em] font-mono text-emerald-400">{pairingCode}</span>
+        <div className="max-w-md w-full text-center space-y-8 animate-in fade-in zoom-in-95 duration-500">
+          <div className="space-y-2">
+            <h1 className="text-4xl font-bold tracking-tight">Pair this Display</h1>
+            <p className="text-neutral-400 text-sm">
+              Scan the QR code or enter the pairing code in your MenuCast dashboard to link this TV.
+            </p>
           </div>
-          <p className="text-xs text-neutral-500 flex items-center justify-center gap-1.5 pt-2">
-            <span className="size-1.5 rounded-full bg-emerald-400/70" />
+
+          <div className="bg-white p-6 rounded-3xl shadow-2xl mx-auto inline-block">
+            {pairingCode && (
+              <QRCodeSVG
+                value={pairUrl}
+                size={220}
+                level="H"
+                includeMargin={false}
+              />
+            )}
+          </div>
+
+          <div className="space-y-3">
+            <p className="text-xs uppercase tracking-widest text-neutral-500 font-semibold">
+              Pairing Code
+            </p>
+            <div className="flex items-center justify-center gap-2">
+              {pairingCode.split("").map((digit, idx) => (
+                <span
+                  key={idx}
+                  className="w-12 h-16 bg-neutral-900 border border-neutral-800 rounded-2xl flex items-center justify-center text-3xl font-mono font-bold text-emerald-400 shadow-inner"
+                >
+                  {digit}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <p className="text-xs text-neutral-500">
             Code valid for <span className="font-mono text-neutral-400">{minutes}:{seconds}</span>
           </p>
         </div>
@@ -504,8 +758,8 @@ export default function TvPage() {
     );
   }
 
-  // State 2: TV Paired confirmation screen (awaiting first push from Figma)
-  if (state === "paired" && !menuUrl) {
+  // State 2: Paired screen awaiting first push
+  if (state === "paired" && !menuUrl && (!menuData || menuMode === "static")) {
     return (
       <div className="min-h-screen bg-neutral-950 text-white flex flex-col items-center justify-center p-8 select-none">
         <div className="max-w-md w-full text-center space-y-6 animate-in fade-in zoom-in-95 duration-500">
@@ -523,7 +777,7 @@ export default function TvPage() {
           <div className="bg-white/5 border border-white/10 rounded-2xl p-6 text-left space-y-3">
             <p className="text-xs uppercase tracking-wider text-neutral-400 font-semibold">Next Step</p>
             <p className="text-sm text-neutral-300 leading-relaxed">
-              Open the <strong>MenuCast Figma Plugin</strong>, select your menu design frame, and click <span className="text-white font-semibold">"Push Current Frame to TV"</span>.
+              Open the <strong>MenuCast Figma Plugin</strong>, select your menu design frame, choose an export mode (Static, Hybrid, or Responsive), and click <span className="text-white font-semibold">"Push Current Frame to TV"</span>.
             </p>
           </div>
 
@@ -536,7 +790,10 @@ export default function TvPage() {
     );
   }
 
-  // State 3: Displaying live menu image
+  // State 3: Displaying Live Menu (Supporting Static, Hybrid, and Responsive Modes)
+  const canvasW = menuData?.canvas?.width || 1920;
+  const canvasH = menuData?.canvas?.height || 1080;
+
   return (
     <div
       className={`relative min-h-screen w-screen bg-black flex items-center justify-center overflow-hidden select-none transition-all duration-300 ${
@@ -545,12 +802,10 @@ export default function TvPage() {
       onMouseMove={triggerControls}
       onClick={triggerControls}
     >
-      {/* Floating Control Menu Bar (shown on hover / key touch, auto-hidden after 5s) */}
+      {/* Floating Control Menu Bar */}
       <div
         className={`fixed top-6 inset-x-0 z-50 flex justify-center px-4 pointer-events-none transition-all duration-500 ease-out ${
-          showControls
-            ? "opacity-100 translate-y-0"
-            : "opacity-0 -translate-y-6 pointer-events-none"
+          showControls ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-6 pointer-events-none"
         }`}
       >
         <div className="pointer-events-auto flex items-center justify-between gap-4 md:gap-8 bg-neutral-900/85 backdrop-blur-xl border border-white/15 shadow-2xl px-5 py-3 rounded-2xl max-w-lg w-full text-white">
@@ -560,7 +815,10 @@ export default function TvPage() {
             </div>
             <div className="min-w-0">
               <p className="text-[11px] font-semibold text-neutral-400 uppercase tracking-widest leading-tight">
-                MenuCast TV
+                MenuCast TV &bull;{" "}
+                <span className="text-emerald-400">
+                  {menuMode === "hybrid" ? "Hybrid Overlay" : menuMode === "responsive" ? "Responsive Flexbox" : "Static Image"}
+                </span>
               </p>
               <h2 className="text-sm font-bold text-white truncate leading-tight mt-0.5">
                 {tvName}
@@ -580,7 +838,7 @@ export default function TvPage() {
                   <svg className="size-4 text-neutral-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 9L4 4m0 0h4m-4 0v4m6 6l5 5m0 0h-4m4 0v-4m-11 5l5-5m-5 5v-4m0 4h4m11-11l-5 5m5-5v4m0-4h-4" />
                   </svg>
-                  <span>Exit Fullscreen</span>
+                  <span>Exit</span>
                 </>
               ) : (
                 <>
@@ -595,7 +853,8 @@ export default function TvPage() {
         </div>
       </div>
 
-      {menuUrl && (
+      {/* MODE 1: Static Image */}
+      {menuMode === "static" && menuUrl && (
         <img
           key={menuUrl}
           src={menuUrl}
@@ -604,6 +863,87 @@ export default function TvPage() {
             isFading ? "opacity-0" : "opacity-100"
           }`}
         />
+      )}
+
+      {/* MODE 2: Hybrid Overlay (Background Graphic + Scaled Live HTML Text & Prices) */}
+      {menuMode === "hybrid" && (
+        <div
+          className={`transition-opacity duration-300 flex items-center justify-center ${
+            isFading ? "opacity-0" : "opacity-100"
+          }`}
+          style={{ width: "100vw", height: "100vh", overflow: "hidden" }}
+        >
+          <div
+            style={{
+              width: `${canvasW}px`,
+              height: `${canvasH}px`,
+              transform: `scale(${canvasScale})`,
+              transformOrigin: "center center",
+              position: "relative",
+              backgroundImage: menuData?.bg_image_url || menuUrl ? `url(${menuData?.bg_image_url || menuUrl})` : "none",
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+              flexShrink: 0,
+            }}
+          >
+            {menuData?.elements?.map((el) => (
+              <div
+                key={el.id}
+                style={{
+                  position: "absolute",
+                  left: `${el.x}px`,
+                  top: `${el.y}px`,
+                  width: `${el.width}px`,
+                  height: `${el.height}px`,
+                  fontSize: `${el.fontSize}px`,
+                  fontFamily: el.fontFamily || "inherit",
+                  fontWeight: el.fontWeight || 400,
+                  color: el.color || "#ffffff",
+                  textAlign: (el.textAlign as any) || "left",
+                  letterSpacing: el.letterSpacing || "normal",
+                  lineHeight: el.lineHeight || 1.2,
+                  opacity: el.opacity ?? 1,
+                  display: "flex",
+                  alignItems: "flex-start",
+                  overflow: "visible",
+                  whiteSpace: "pre-wrap",
+                  wordBreak: "break-word",
+                  boxSizing: "border-box",
+                }}
+              >
+                {el.text}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* MODE 3: Responsive AutoLayout HTML & CSS */}
+      {menuMode === "responsive" && menuData?.tree && (
+        <div
+          className={`transition-opacity duration-300 flex items-center justify-center ${
+            isFading ? "opacity-0" : "opacity-100"
+          }`}
+          style={{ width: "100vw", height: "100vh", overflow: "hidden" }}
+        >
+          <div
+            style={{
+              width: `${canvasW}px`,
+              height: `${canvasH}px`,
+              transform: `scale(${canvasScale})`,
+              transformOrigin: "center center",
+              backgroundColor: menuData?.canvas?.backgroundColor || "#111111",
+              position: "relative",
+              flexShrink: 0,
+              boxSizing: "border-box",
+            }}
+          >
+            <ResponsiveNodeView
+              node={menuData.tree}
+              fields={menuData.fields || {}}
+            />
+          </div>
+        </div>
       )}
     </div>
   );

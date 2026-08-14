@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
     { auth: { autoRefreshToken: false, persistSession: false } }
   );
 
-  let query = supabase.from("tvs").select("id, name, pairing_code, paired_at, current_menu_url");
+  let query = supabase.from("tvs").select("id, name, pairing_code, paired_at, current_menu_url, menu_mode, menu_data");
 
   if (tvId) {
     query = query.eq("id", tvId);
@@ -40,5 +40,7 @@ export async function GET(req: NextRequest) {
     tv_id: tv.id,
     name: tv.name,
     current_menu_url: tv.current_menu_url,
+    menu_mode: tv.menu_mode || "static",
+    menu_data: tv.menu_data || null,
   });
 }
