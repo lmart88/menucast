@@ -12,11 +12,15 @@
       color: #f5f5f5;
       padding: 16px;
       font-size: 13px;
+      user-select: none;
     }
     h1 { font-size: 15px; font-weight: 600; margin-bottom: 2px; }
     p.subtitle { color: #888; font-size: 12px; line-height: 1.4; margin-bottom: 14px; }
-    label { display: block; font-size: 11px; font-weight: 500; color: #aaa; margin-bottom: 5px; margin-top: 12px; text-transform: uppercase; letter-spacing: 0.05em; }
-    input, select {
+    label.field-label {
+      display: block; font-size: 11px; font-weight: 600; color: #aaa;
+      margin-bottom: 6px; margin-top: 14px; text-transform: uppercase; letter-spacing: 0.06em;
+    }
+    input[type="text"], input[type="password"], select {
       width: 100%; padding: 8px 10px;
       background: #1a1a1a; border: 1px solid #333;
       border-radius: 6px; color: #fff; font-size: 12px;
@@ -24,8 +28,8 @@
     }
     input:focus, select:focus { border-color: #666; }
     button {
-      width: 100%; padding: 9px;
-      border-radius: 6px; border: none;
+      width: 100%; padding: 10px;
+      border-radius: 7px; border: none;
       font-size: 12px; font-weight: 600; cursor: pointer;
       transition: background 0.15s, opacity 0.15s;
     }
@@ -59,7 +63,7 @@
       border: 1px solid #282828;
       border-radius: 8px;
       padding: 10px 12px;
-      margin-top: 12px;
+      margin-top: 10px;
       margin-bottom: 12px;
     }
     .specs-title {
@@ -87,7 +91,68 @@
     .spec-item .val {
       font-weight: 600;
       color: #fff;
-      font-mono: monospace;
+    }
+
+    /* Mode Selection Radio Group */
+    .mode-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 4px;
+      margin-bottom: 14px;
+    }
+    .mode-card {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 9px 11px;
+      background: #151515;
+      border: 1px solid #282828;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .mode-card:hover {
+      border-color: #444;
+      background: #1a1a1a;
+    }
+    .mode-card.selected {
+      border-color: #3b82f6;
+      background: rgba(59, 130, 246, 0.08);
+    }
+    .mode-card input[type="radio"] {
+      margin-top: 2px;
+      accent-color: #3b82f6;
+      cursor: pointer;
+    }
+    .mode-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .mode-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .mode-badge {
+      font-size: 9px;
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .badge-static { background: #262626; color: #aaa; }
+    .badge-editable { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+    .badge-responsive { background: rgba(139, 92, 246, 0.2); color: #a78bfa; }
+    .mode-desc {
+      font-size: 11px;
+      color: #888;
+      line-height: 1.35;
     }
   </style>
 </head>
@@ -97,10 +162,10 @@
 
   <!-- Connect section -->
   <div id="connect-section" class="section visible">
-    <label for="token-input">API Token</label>
+    <label class="field-label" for="token-input">API Token</label>
     <input id="token-input" type="password" placeholder="Paste token from dashboard" />
 
-    <label for="app-url-input">App URL</label>
+    <label class="field-label" for="app-url-input">App URL</label>
     <input id="app-url-input" type="text" value="http://localhost:3000" />
 
     <div style="margin-top: 16px">
@@ -111,7 +176,7 @@
 
   <!-- Push section -->
   <div id="push-section" class="section">
-    <label for="tv-select">Target TV</label>
+    <label class="field-label" for="tv-select">Target TV</label>
     <select id="tv-select">
       <option value="">Loading your TVs…</option>
     </select>
@@ -140,6 +205,46 @@
       <button class="btn-outline" id="create-frame-btn">📐 Create Matched Frame on Canvas</button>
     </div>
 
+    <!-- Export & Display Mode Selector -->
+    <label class="field-label">Export & Display Mode</label>
+    <div class="mode-group" id="mode-group">
+      <!-- 1. Static -->
+      <label class="mode-card selected" id="card-static">
+        <input type="radio" name="export-mode" value="static" checked />
+        <div class="mode-info">
+          <div class="mode-title">
+            🖼️ Static Image
+            <span class="mode-badge badge-static">Fixed</span>
+          </div>
+          <p class="mode-desc">Direct 2x PNG raster export. 100% exact design.</p>
+        </div>
+      </label>
+
+      <!-- 2. Hybrid Overlay -->
+      <label class="mode-card" id="card-hybrid">
+        <input type="radio" name="export-mode" value="hybrid" />
+        <div class="mode-info">
+          <div class="mode-title">
+            🔤 Hybrid Overlay
+            <span class="mode-badge badge-editable">Live Editable</span>
+          </div>
+          <p class="mode-desc">Background art + editable live HTML text & prices.</p>
+        </div>
+      </label>
+
+      <!-- 3. Responsive HTML -->
+      <label class="mode-card" id="card-responsive">
+        <input type="radio" name="export-mode" value="responsive" />
+        <div class="mode-info">
+          <div class="mode-title">
+            📐 Responsive HTML
+            <span class="mode-badge badge-responsive">Flexbox</span>
+          </div>
+          <p class="mode-desc">AutoLayout converted to pure responsive HTML/CSS.</p>
+        </div>
+      </label>
+    </div>
+
     <div style="margin-top: 14px">
       <button class="btn-primary" id="push-btn">Push Current Frame to TV</button>
       <button class="btn-secondary" id="disconnect-btn">Disconnect / Switch Account</button>
@@ -152,6 +257,21 @@
     let appUrl = "http://localhost:3000";
     let tvs = [];
     let selectedTv = null;
+    let selectedMode = "static";
+
+    // Mode selection radio event listeners
+    const modeCards = document.querySelectorAll(".mode-card");
+    modeCards.forEach((card) => {
+      card.addEventListener("click", () => {
+        const radio = card.querySelector('input[type="radio"]');
+        if (radio) {
+          radio.checked = true;
+          selectedMode = radio.value;
+          modeCards.forEach((c) => c.classList.remove("selected"));
+          card.classList.add("selected");
+        }
+      });
+    });
 
     function showStatus(elId, msg, type) {
       const el = document.getElementById(elId);
@@ -286,7 +406,6 @@
         token = inputToken;
         appUrl = cleanUrl;
 
-        // Save credentials via figma.clientStorage
         parent.postMessage({
           pluginMessage: {
             type: "save-credentials",
@@ -314,11 +433,18 @@
         showStatus("push-status", "Please select a TV first.", "error");
         return;
       }
-      showStatus("push-status", "Exporting frame from Figma…", "loading");
+
+      const modeLabels = {
+        static: "Static Image",
+        hybrid: "Hybrid Overlay with Editable Text",
+        responsive: "Responsive Flexbox HTML",
+      };
+
+      showStatus("push-status", `Processing menu (${modeLabels[selectedMode]})…`, "loading");
       parent.postMessage({
         pluginMessage: {
           type: "export-and-push",
-          payload: { tvId, token, appUrl },
+          payload: { tvId, token, appUrl, mode: selectedMode },
         },
       }, "*");
     });
@@ -345,14 +471,14 @@
       }
 
       if (msg.type === "upload") {
-        const { bytes, fileName, tvId, token: t, appUrl: url } = msg.payload;
+        const { mode, bytes, fileName, tvId, token: t, appUrl: url, menuData } = msg.payload;
 
-        showStatus("push-status", "Uploading menu image…", "loading");
+        showStatus("push-status", "Uploading menu assets…", "loading");
 
         try {
           const cleanUrl = url.replace(/\/+$/, "");
 
-          // 1. Get signed upload URL
+          // 1. Get signed upload URL for the graphic asset
           const uploadRes = await fetch(`${cleanUrl}/api/menu/upload`, {
             method: "POST",
             headers: {
@@ -369,7 +495,7 @@
 
           const { upload_url, public_url } = await uploadRes.json();
 
-          // 2. Upload directly to Supabase Storage
+          // 2. Upload asset directly to Supabase Storage
           const putRes = await fetch(upload_url, {
             method: "PUT",
             headers: { "Content-Type": "image/png" },
@@ -380,15 +506,23 @@
             throw new Error(`Storage upload failed (HTTP ${putRes.status})`);
           }
 
+          // If hybrid mode, attach the background asset URL to menuData
+          const finalMenuData = menuData ? { ...menuData, bg_image_url: public_url } : null;
+
           // 3. Trigger push to TV
-          showStatus("push-status", "Broadcasting update to TV…", "loading");
+          showStatus("push-status", "Broadcasting menu to TV…", "loading");
           const pushRes = await fetch(`${cleanUrl}/api/menu/push`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
               Authorization: `Bearer ${t}`,
             },
-            body: JSON.stringify({ tv_id: tvId, image_url: public_url }),
+            body: JSON.stringify({
+              tv_id: tvId,
+              image_url: public_url,
+              menu_mode: mode,
+              menu_data: finalMenuData,
+            }),
           });
 
           if (!pushRes.ok) {
@@ -396,7 +530,7 @@
             throw new Error(errData.error || `Push trigger failed (HTTP ${pushRes.status})`);
           }
 
-          showStatus("push-status", "✓ Menu successfully pushed to TV!", "success");
+          showStatus("push-status", `✓ Pushed successfully in ${mode.toUpperCase()} mode!`, "success");
         } catch (err) {
           console.error("Upload error:", err);
           showStatus("push-status", `Push failed: ${err.message}`, "error");

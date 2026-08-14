@@ -17,6 +17,8 @@ export interface Database {
           pairing_code: string;
           paired_at: string | null;
           current_menu_url: string | null;
+          menu_mode?: "static" | "hybrid" | "responsive" | string | null;
+          menu_data?: Json | null;
           screen_width?: number | null;
           screen_height?: number | null;
           aspect_ratio?: string | null;
@@ -30,6 +32,8 @@ export interface Database {
           pairing_code: string;
           paired_at?: string | null;
           current_menu_url?: string | null;
+          menu_mode?: "static" | "hybrid" | "responsive" | string | null;
+          menu_data?: Json | null;
           screen_width?: number | null;
           screen_height?: number | null;
           aspect_ratio?: string | null;
@@ -43,6 +47,8 @@ export interface Database {
           pairing_code?: string;
           paired_at?: string | null;
           current_menu_url?: string | null;
+          menu_mode?: "static" | "hybrid" | "responsive" | string | null;
+          menu_data?: Json | null;
           screen_width?: number | null;
           screen_height?: number | null;
           aspect_ratio?: string | null;
@@ -56,6 +62,8 @@ export interface Database {
           id: string;
           tv_id: string;
           image_url: string;
+          menu_mode?: "static" | "hybrid" | "responsive" | string | null;
+          menu_data?: Json | null;
           pushed_at: string;
           pushed_by: string | null;
         };
@@ -63,6 +71,8 @@ export interface Database {
           id?: string;
           tv_id: string;
           image_url: string;
+          menu_mode?: "static" | "hybrid" | "responsive" | string | null;
+          menu_data?: Json | null;
           pushed_at?: string;
           pushed_by?: string | null;
         };
@@ -70,6 +80,8 @@ export interface Database {
           id?: string;
           tv_id?: string;
           image_url?: string;
+          menu_mode?: "static" | "hybrid" | "responsive" | string | null;
+          menu_data?: Json | null;
           pushed_at?: string;
           pushed_by?: string | null;
         };
