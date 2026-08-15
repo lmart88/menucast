@@ -592,18 +592,39 @@ export default function TvPage() {
         saveStoredPairedDevice({
           tv_id: tvId,
           name: tvName,
-          current_menu_url: image_url,
+          current_menu_url: image_url || "",
           menu_mode: mode,
           menu_data: data,
         });
 
         setIsFading(true);
         setTimeout(() => {
-          setMenuUrl(image_url);
+          setMenuUrl(image_url || "");
           setMenuMode(mode);
           setMenuData(data);
           setIsFading(false);
-          setState("displaying");
+          if (image_url || (mode === "responsive" && data)) {
+            setState("displaying");
+          } else {
+            setState("paired");
+          }
+        }, 300);
+      })
+      .on("broadcast", { event: "menu:clear" }, () => {
+        saveStoredPairedDevice({
+          tv_id: tvId,
+          name: tvName,
+          current_menu_url: "",
+          menu_mode: "static",
+          menu_data: null,
+        });
+        setIsFading(true);
+        setTimeout(() => {
+          setMenuUrl("");
+          setMenuMode("static");
+          setMenuData(null);
+          setIsFading(false);
+          setState("paired");
         }, 300);
       })
       .on("broadcast", { event: "menu:data-update" }, (payload) => {
@@ -659,11 +680,31 @@ export default function TvPage() {
 
             setIsFading(true);
             setTimeout(() => {
-              setMenuUrl(data.current_menu_url);
+              setMenuUrl(data.current_menu_url || "");
               setMenuMode(nextMode);
               setMenuData(nextData);
               setIsFading(false);
-              setState("displaying");
+              if (data.current_menu_url || (nextMode === "responsive" && nextData)) {
+                setState("displaying");
+              } else {
+                setState("paired");
+              }
+            }, 300);
+          } else if (!data.current_menu_url && !data.menu_data && (menuUrl || menuData)) {
+            saveStoredPairedDevice({
+              tv_id: tvId,
+              name: data.name || tvName,
+              current_menu_url: "",
+              menu_mode: "static",
+              menu_data: null,
+            });
+            setIsFading(true);
+            setTimeout(() => {
+              setMenuUrl("");
+              setMenuMode("static");
+              setMenuData(null);
+              setIsFading(false);
+              setState("paired");
             }, 300);
           }
         } else if (res.status === 404) {
@@ -680,7 +721,7 @@ export default function TvPage() {
       clearInterval(pollInterval);
       supabase.removeChannel(tvChannel);
     };
-  }, [tvId, tvName, menuUrl, menuMode]);
+  }, [tvId, tvName, menuUrl, menuMode, menuData]);
 
   // Calculate canvas scaling for Hybrid & Responsive modes
   const canvasScale = useMemo(() => {
