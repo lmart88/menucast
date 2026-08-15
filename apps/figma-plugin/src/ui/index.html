@@ -92,68 +92,6 @@
       font-weight: 600;
       color: #fff;
     }
-
-    /* Mode Selection Radio Group */
-    .mode-group {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      margin-top: 4px;
-      margin-bottom: 14px;
-    }
-    .mode-card {
-      display: flex;
-      align-items: flex-start;
-      gap: 10px;
-      padding: 9px 11px;
-      background: #151515;
-      border: 1px solid #282828;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: all 0.15s ease;
-    }
-    .mode-card:hover {
-      border-color: #444;
-      background: #1a1a1a;
-    }
-    .mode-card.selected {
-      border-color: #3b82f6;
-      background: rgba(59, 130, 246, 0.08);
-    }
-    .mode-card input[type="radio"] {
-      margin-top: 2px;
-      accent-color: #3b82f6;
-      cursor: pointer;
-    }
-    .mode-info {
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-    }
-    .mode-title {
-      font-size: 12px;
-      font-weight: 600;
-      color: #fff;
-      display: flex;
-      align-items: center;
-      gap: 5px;
-    }
-    .mode-badge {
-      font-size: 9px;
-      padding: 1px 5px;
-      border-radius: 4px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-    }
-    .badge-static { background: #262626; color: #aaa; }
-    .badge-editable { background: rgba(16, 185, 129, 0.2); color: #34d399; }
-    .badge-responsive { background: rgba(139, 92, 246, 0.2); color: #a78bfa; }
-    .mode-desc {
-      font-size: 11px;
-      color: #888;
-      line-height: 1.35;
-    }
   </style>
 </head>
 <body>
@@ -205,46 +143,6 @@
       <button class="btn-outline" id="create-frame-btn">📐 Create Matched Frame on Canvas</button>
     </div>
 
-    <!-- Export & Display Mode Selector -->
-    <label class="field-label">Export & Display Mode</label>
-    <div class="mode-group" id="mode-group">
-      <!-- 1. Static -->
-      <label class="mode-card selected" id="card-static">
-        <input type="radio" name="export-mode" value="static" checked />
-        <div class="mode-info">
-          <div class="mode-title">
-            🖼️ Static Image
-            <span class="mode-badge badge-static">Fixed</span>
-          </div>
-          <p class="mode-desc">Direct 2x PNG raster export. 100% exact design.</p>
-        </div>
-      </label>
-
-      <!-- 2. Hybrid Overlay -->
-      <label class="mode-card" id="card-hybrid">
-        <input type="radio" name="export-mode" value="hybrid" />
-        <div class="mode-info">
-          <div class="mode-title">
-            🔤 Hybrid Overlay
-            <span class="mode-badge badge-editable">Live Editable</span>
-          </div>
-          <p class="mode-desc">Background art + editable live HTML text & prices.</p>
-        </div>
-      </label>
-
-      <!-- 3. Responsive HTML -->
-      <label class="mode-card" id="card-responsive">
-        <input type="radio" name="export-mode" value="responsive" />
-        <div class="mode-info">
-          <div class="mode-title">
-            📐 Responsive HTML
-            <span class="mode-badge badge-responsive">Flexbox</span>
-          </div>
-          <p class="mode-desc">AutoLayout converted to pure responsive HTML/CSS.</p>
-        </div>
-      </label>
-    </div>
-
     <div style="margin-top: 14px">
       <button class="btn-primary" id="push-btn">Push Current Frame to TV</button>
       <button class="btn-secondary" id="disconnect-btn">Disconnect / Switch Account</button>
@@ -257,21 +155,6 @@
     let appUrl = "http://localhost:3000";
     let tvs = [];
     let selectedTv = null;
-    let selectedMode = "static";
-
-    // Mode selection radio event listeners
-    const modeCards = document.querySelectorAll(".mode-card");
-    modeCards.forEach((card) => {
-      card.addEventListener("click", () => {
-        const radio = card.querySelector('input[type="radio"]');
-        if (radio) {
-          radio.checked = true;
-          selectedMode = radio.value;
-          modeCards.forEach((c) => c.classList.remove("selected"));
-          card.classList.add("selected");
-        }
-      });
-    });
 
     function showStatus(elId, msg, type) {
       const el = document.getElementById(elId);
@@ -434,17 +317,11 @@
         return;
       }
 
-      const modeLabels = {
-        static: "Static Image",
-        hybrid: "Hybrid Overlay with Editable Text",
-        responsive: "Responsive Flexbox HTML",
-      };
-
-      showStatus("push-status", `Processing menu (${modeLabels[selectedMode]})…`, "loading");
+      showStatus("push-status", "Processing menu…", "loading");
       parent.postMessage({
         pluginMessage: {
           type: "export-and-push",
-          payload: { tvId, token, appUrl, mode: selectedMode },
+          payload: { tvId, token, appUrl },
         },
       }, "*");
     });
@@ -471,9 +348,9 @@
       }
 
       if (msg.type === "upload") {
-        const { mode, bytes, fileName, tvId, token: t, appUrl: url, menuData } = msg.payload;
+        const { bytes, fileName, tvId, token: t, appUrl: url } = msg.payload;
 
-        showStatus("push-status", "Uploading menu assets…", "loading");
+        showStatus("push-status", "Uploading menu image…", "loading");
 
         try {
           const cleanUrl = url.replace(/\/+$/, "");
@@ -506,9 +383,6 @@
             throw new Error(`Storage upload failed (HTTP ${putRes.status})`);
           }
 
-          // If hybrid mode, attach the background asset URL to menuData
-          const finalMenuData = menuData ? { ...menuData, bg_image_url: public_url } : null;
-
           // 3. Trigger push to TV
           showStatus("push-status", "Broadcasting menu to TV…", "loading");
           const pushRes = await fetch(`${cleanUrl}/api/menu/push`, {
@@ -520,8 +394,8 @@
             body: JSON.stringify({
               tv_id: tvId,
               image_url: public_url,
-              menu_mode: mode,
-              menu_data: finalMenuData,
+              menu_mode: "static",
+              menu_data: null,
             }),
           });
 
@@ -530,7 +404,7 @@
             throw new Error(errData.error || `Push trigger failed (HTTP ${pushRes.status})`);
           }
 
-          showStatus("push-status", `✓ Pushed successfully in ${mode.toUpperCase()} mode!`, "success");
+          showStatus("push-status", "✓ Pushed successfully to TV!", "success");
         } catch (err) {
           console.error("Upload error:", err);
           showStatus("push-status", `Push failed: ${err.message}`, "error");
