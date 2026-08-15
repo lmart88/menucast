@@ -271,12 +271,33 @@ export default function TvPage() {
   const [showControls, setShowControls] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [windowDimensions, setWindowDimensions] = useState({ width: 1920, height: 1080 });
+  const [installPrompt, setInstallPrompt] = useState<any>(null);
 
   const isInitializingRef = useRef(false);
   const hideControlsTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const pairUrl = `${appUrl}/pair?code=${pairingCode}`;
+
+  // Listen for PWA install prompt
+  useEffect(() => {
+    const handleBeforeInstall = (e: Event) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+    };
+
+    window.addEventListener("beforeinstallprompt", handleBeforeInstall);
+    return () => window.removeEventListener("beforeinstallprompt", handleBeforeInstall);
+  }, []);
+
+  async function handleInstallApp() {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    const { outcome } = await installPrompt.userChoice;
+    if (outcome === "accepted") {
+      setInstallPrompt(null);
+    }
+  }
 
   // Track window dimensions for scale calculation
   useEffect(() => {
@@ -868,6 +889,19 @@ export default function TvPage() {
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
+            {installPrompt && (
+              <button
+                type="button"
+                onClick={handleInstallApp}
+                title="Install TV Display App on this Device"
+                className="flex items-center gap-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 px-3 py-2 rounded-xl text-xs font-semibold tracking-wide transition-colors cursor-pointer"
+              >
+                <svg className="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                <span>Install TV App</span>
+              </button>
+            )}
             <button
               type="button"
               onClick={toggleFullscreen}

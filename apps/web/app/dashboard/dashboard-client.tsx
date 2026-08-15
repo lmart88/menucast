@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { signOut } from "next-auth/react";
 import Link from "next/link";
 import type { Database } from "@menucast/supabase";
@@ -31,6 +31,27 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
   const [copied, setCopied] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [installPrompt, setInstallPrompt] = useState<any>(null);
+
+  // Listen for PWA install prompt
+  useEffect(() => {
+    const handleBeforeInstall = (e: Event) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+    };
+
+    window.addEventListener("beforeinstallprompt", handleBeforeInstall);
+    return () => window.removeEventListener("beforeinstallprompt", handleBeforeInstall);
+  }, []);
+
+  async function handleInstallApp() {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    const { outcome } = await installPrompt.userChoice;
+    if (outcome === "accepted") {
+      setInstallPrompt(null);
+    }
+  }
 
   // Screen Detail & Image Management Modal
   const [activeScreen, setActiveScreen] = useState<TV | null>(null);
@@ -304,7 +325,18 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
           <span className="text-xl">📺</span>
           <span>MenuCast</span>
         </Link>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
+          {installPrompt && (
+            <button
+              onClick={handleInstallApp}
+              className="flex items-center gap-1.5 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 px-3 py-1.5 rounded-lg text-xs font-semibold tracking-wide transition-colors cursor-pointer"
+            >
+              <svg className="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              <span>Install App</span>
+            </button>
+          )}
           <span className="text-sm text-neutral-500">{userName}</span>
           <button
             onClick={() => signOut({ callbackUrl: "/" })}
