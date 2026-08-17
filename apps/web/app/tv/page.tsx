@@ -182,6 +182,147 @@ function clearStoredPairing() {
 }
 
 // ----------------------------------------------------
+// Smooth Image Crossfade Component for TV Display
+// ----------------------------------------------------
+interface TvImageCrossfadeProps {
+  src: string;
+  alt?: string;
+  className?: string;
+}
+
+function TvImageCrossfade({ src, alt = "Restaurant Menu", className = "" }: TvImageCrossfadeProps) {
+  // activeSrc: The currently visible base image
+  const [activeSrc, setActiveSrc] = useState<string>(src);
+  // incomingSrc: The new image currently loading / fading in
+  const [incomingSrc, setIncomingSrc] = useState<string | null>(null);
+  // incomingOpacity: Controls the CSS opacity of the incoming image (0 or 1)
+  const [incomingOpacity, setIncomingOpacity] = useState<number>(0);
+  // activeOpacity: Controls the CSS opacity of the base image
+  const [activeOpacity, setActiveOpacity] = useState<number>(src ? 1 : 0);
+
+  const swapTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Sync activeSrc if src changes and activeSrc is empty
+  useEffect(() => {
+    if (!src) {
+      if (activeSrc) {
+        setActiveOpacity(0);
+        const timer = setTimeout(() => {
+          setActiveSrc("");
+          setIncomingSrc(null);
+        }, 500);
+        return () => clearTimeout(timer);
+      }
+      return;
+    }
+
+    if (!activeSrc) {
+      setActiveSrc(src);
+      setActiveOpacity(1);
+      return;
+    }
+
+    if (src === activeSrc && !incomingSrc) {
+      return;
+    }
+
+    if (src === incomingSrc) {
+      return;
+    }
+
+    // New incoming image to cross-fade
+    if (swapTimerRef.current) {
+      clearTimeout(swapTimerRef.current);
+      swapTimerRef.current = null;
+    }
+
+    setIncomingSrc(src);
+    setIncomingOpacity(0);
+  }, [src, activeSrc, incomingSrc]);
+
+  const completeSwap = useCallback((newSrc: string) => {
+    setActiveSrc(newSrc);
+    setActiveOpacity(1);
+    setIncomingSrc(null);
+    setIncomingOpacity(0);
+    if (swapTimerRef.current) {
+      clearTimeout(swapTimerRef.current);
+      swapTimerRef.current = null;
+    }
+  }, []);
+
+  const handleIncomingLoad = useCallback(() => {
+    // Start fade-in on next animation frame
+    requestAnimationFrame(() => {
+      setIncomingOpacity(1);
+    });
+
+    // Schedule base image swap after fade-in animation finishes
+    if (swapTimerRef.current) {
+      clearTimeout(swapTimerRef.current);
+    }
+    swapTimerRef.current = setTimeout(() => {
+      if (incomingSrc) {
+        completeSwap(incomingSrc);
+      }
+    }, 850);
+  }, [incomingSrc, completeSwap]);
+
+  // Clean up timer on unmount
+  useEffect(() => {
+    return () => {
+      if (swapTimerRef.current) {
+        clearTimeout(swapTimerRef.current);
+      }
+    };
+  }, []);
+
+  return (
+    <div className={`absolute inset-0 w-full h-full flex items-center justify-center overflow-hidden bg-black ${className}`}>
+      {/* Base Layer (Active / Previous Image) */}
+      {activeSrc && (
+        <img
+          key={`active-${activeSrc}`}
+          src={activeSrc}
+          alt={alt}
+          style={{
+            opacity: activeOpacity,
+            transition: "opacity 600ms cubic-bezier(0.4, 0, 0.2, 1)",
+          }}
+          className="absolute inset-0 w-full h-full object-contain pointer-events-none"
+        />
+      )}
+
+      {/* Foreground Layer (New Incoming Image with smooth fade-in) */}
+      {incomingSrc && (
+        <img
+          key={`incoming-${incomingSrc}`}
+          ref={(node) => {
+            if (node && node.complete && incomingOpacity === 0) {
+              handleIncomingLoad();
+            }
+          }}
+          src={incomingSrc}
+          alt={alt}
+          onLoad={handleIncomingLoad}
+          onError={() => {
+            console.error("Failed to load incoming image:", incomingSrc);
+            if (incomingSrc) {
+              completeSwap(incomingSrc);
+            }
+          }}
+          style={{
+            opacity: incomingOpacity,
+            transition: "opacity 800ms cubic-bezier(0.4, 0, 0.2, 1)",
+          }}
+          className="absolute inset-0 w-full h-full object-contain pointer-events-none will-change-[opacity]"
+        />
+      )}
+    </div>
+  );
+}
+
+// ----------------------------------------------------
 // Recursive Component for Responsive AutoLayout Nodes
 // ----------------------------------------------------
 function ResponsiveNodeView({
@@ -618,18 +759,14 @@ export default function TvPage() {
           menu_data: data,
         });
 
-        setIsFading(true);
-        setTimeout(() => {
-          setMenuUrl(image_url || "");
-          setMenuMode(mode);
-          setMenuData(data);
-          setIsFading(false);
-          if (image_url || (mode === "responsive" && data)) {
-            setState("displaying");
-          } else {
-            setState("paired");
-          }
-        }, 300);
+        setMenuUrl(image_url || "");
+        setMenuMode(mode);
+        setMenuData(data);
+        if (image_url || (mode === "responsive" && data)) {
+          setState("displaying");
+        } else {
+          setState("paired");
+        }
       })
       .on("broadcast", { event: "menu:clear" }, () => {
         saveStoredPairedDevice({
@@ -646,7 +783,7 @@ export default function TvPage() {
           setMenuData(null);
           setIsFading(false);
           setState("paired");
-        }, 300);
+        }, 400);
       })
       .on("broadcast", { event: "menu:data-update" }, (payload) => {
         const { menu_data: updatedData } = payload.payload as { menu_data: MenuData };
@@ -699,18 +836,14 @@ export default function TvPage() {
               menu_data: nextData,
             });
 
-            setIsFading(true);
-            setTimeout(() => {
-              setMenuUrl(data.current_menu_url || "");
-              setMenuMode(nextMode);
-              setMenuData(nextData);
-              setIsFading(false);
-              if (data.current_menu_url || (nextMode === "responsive" && nextData)) {
-                setState("displaying");
-              } else {
-                setState("paired");
-              }
-            }, 300);
+            setMenuUrl(data.current_menu_url || "");
+            setMenuMode(nextMode);
+            setMenuData(nextData);
+            if (data.current_menu_url || (nextMode === "responsive" && nextData)) {
+              setState("displaying");
+            } else {
+              setState("paired");
+            }
           } else if (!data.current_menu_url && !data.menu_data && (menuUrl || menuData)) {
             saveStoredPairedDevice({
               tv_id: tvId,
@@ -726,7 +859,7 @@ export default function TvPage() {
               setMenuData(null);
               setIsFading(false);
               setState("paired");
-            }, 300);
+            }, 400);
           }
         } else if (res.status === 404) {
           clearStoredPairedDevice();
@@ -858,7 +991,7 @@ export default function TvPage() {
 
   return (
     <div
-      className={`relative min-h-screen w-screen bg-black flex items-center justify-center overflow-hidden select-none transition-all duration-300 ${
+      className={`relative h-screen w-screen bg-black flex items-center justify-center overflow-hidden select-none transition-all duration-300 ${
         showControls ? "cursor-default" : "cursor-none"
       }`}
       onMouseMove={triggerControls}
@@ -930,20 +1063,16 @@ export default function TvPage() {
 
       {/* MODE 1: Static Image */}
       {menuMode === "static" && menuUrl && (
-        <img
-          key={menuUrl}
+        <TvImageCrossfade
           src={menuUrl}
           alt="Restaurant Menu"
-          className={`w-full h-full object-contain transition-opacity duration-300 ${
-            isFading ? "opacity-0" : "opacity-100"
-          }`}
         />
       )}
 
       {/* MODE 2: Hybrid Overlay (Background Graphic + Scaled Live HTML Text & Prices) */}
       {menuMode === "hybrid" && (
         <div
-          className={`transition-opacity duration-300 flex items-center justify-center ${
+          className={`flex items-center justify-center ${
             isFading ? "opacity-0" : "opacity-100"
           }`}
           style={{ width: "100vw", height: "100vh", overflow: "hidden" }}
@@ -955,12 +1084,16 @@ export default function TvPage() {
               transform: `scale(${canvasScale})`,
               transformOrigin: "center center",
               position: "relative",
-              backgroundImage: menuData?.bg_image_url || menuUrl ? `url(${menuData?.bg_image_url || menuUrl})` : "none",
-              backgroundSize: "cover",
-              backgroundPosition: "center",
               flexShrink: 0,
             }}
           >
+            {(menuData?.bg_image_url || menuUrl) && (
+              <TvImageCrossfade
+                src={menuData?.bg_image_url || menuUrl}
+                alt="Menu Background"
+                className="absolute inset-0"
+              />
+            )}
             {menuData?.elements?.map((el) => (
               <div
                 key={el.id}
