@@ -1,0 +1,25 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="320dp"
+    android:height="180dp"
+    android:viewportWidth="320"
+    android:viewportHeight="180">
+    <!-- Dark Background -->
+    <path
+        android:fillColor="#0A0A0A"
+        android:pathData="M0,0h320v180h-320z" />
+
+    <!-- Emerald Glow Ring -->
+    <path
+        android:fillColor="#10B981"
+        android:pathData="M160,90m-40,0a40,40 0,1,1 80,0a40,40 0,1,1 -80,0" />
+
+    <!-- Dark Inner Circle -->
+    <path
+        android:fillColor="#0A0A0A"
+        android:pathData="M160,90m-32,0a32,32 0,1,1 64,0a32,32 0,1,1 -64,0" />
+
+    <!-- Cast / Screen Icon -->
+    <path
+        android:fillColor="#34D399"
+        android:pathData="M148,78h24c2.2,0 4,1.8 4,4v16c0,2.2 -1.8,4 -4,4h-24c-2.2,0 -4,-1.8 -4,-4v-16c0,-2.2 1.8,-4 4,-4z M146,82h28v12h-28z M156,104h8v2h-8z M152,106h16v1.5h-16z" />
+</vector>
