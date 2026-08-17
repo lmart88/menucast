@@ -38,7 +38,7 @@ function LoginForm() {
       <div className="w-full max-w-sm space-y-8">
         <div className="text-center">
           <Link href="/" className="text-xl font-semibold text-white tracking-tight">
-            MenuCast
+            miniKast
           </Link>
           <h2 className="mt-6 text-2xl font-semibold text-white">Sign in</h2>
           <p className="mt-1 text-sm text-neutral-500">Welcome back to your dashboard</p>

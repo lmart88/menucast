@@ -1,6 +1,6 @@
 {
-  "name": "MenuCast",
-  "id": "menucast-plugin",
+  "name": "miniKast",
+  "id": "minikast-plugin",
   "api": "1.0.0",
   "main": "dist/plugin.js",
   "ui": "dist/ui.html",

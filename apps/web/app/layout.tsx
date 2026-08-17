@@ -13,14 +13,14 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "MenuCast — Digital Menu Management for Restaurants",
+  title: "miniKast — Digital Menu Management for Restaurants",
   description:
     "Push beautiful digital menus to your restaurant TV in seconds. Design in Figma, publish instantly.",
-  applicationName: "MenuCast",
+  applicationName: "miniKast",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "MenuCast",
+    title: "miniKast",
   },
   formatDetection: {
     telephone: false,

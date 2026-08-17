@@ -9,7 +9,7 @@ export default function ServiceWorkerRegister() {
         navigator.serviceWorker
           .register("/sw.js")
           .then((registration) => {
-            console.log("✓ MenuCast PWA Service Worker registered:", registration.scope);
+            console.log("✓ miniKast PWA Service Worker registered:", registration.scope);
           })
           .catch((error) => {
             console.warn("PWA Service Worker registration failed:", error);

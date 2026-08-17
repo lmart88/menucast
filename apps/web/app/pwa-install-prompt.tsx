@@ -101,12 +101,12 @@ export default function PwaInstallPrompt() {
           <div className="flex items-center gap-3.5 min-w-0">
             {/* App Icon */}
             <div className="size-11 rounded-xl bg-neutral-950 border border-emerald-500/30 flex items-center justify-center shrink-0 shadow-inner overflow-hidden p-1">
-              <img src="/icons/icon-192.png" alt="MenuCast" className="w-full h-full object-contain rounded-lg" />
+              <img src="/icons/icon-192.png" alt="miniKast" className="w-full h-full object-contain rounded-lg" />
             </div>
 
             <div className="min-w-0 space-y-0.5">
               <div className="flex items-center gap-2">
-                <h4 className="text-sm font-bold text-white truncate">Install MenuCast App</h4>
+                <h4 className="text-sm font-bold text-white truncate">Install miniKast App</h4>
                 <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-semibold px-2 py-0.5 rounded-full border border-emerald-500/30 shrink-0">
                   Fast Access
                 </span>
@@ -146,10 +146,10 @@ export default function PwaInstallPrompt() {
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
                 <div className="size-12 rounded-2xl bg-neutral-950 border border-emerald-500/30 flex items-center justify-center overflow-hidden p-1.5">
-                  <img src="/icons/icon-192.png" alt="MenuCast" className="w-full h-full object-contain rounded-xl" />
+                  <img src="/icons/icon-192.png" alt="miniKast" className="w-full h-full object-contain rounded-xl" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold">Install MenuCast</h3>
+                  <h3 className="text-base font-bold">Install miniKast</h3>
                   <p className="text-xs text-neutral-400">iOS Safari Instructions</p>
                 </div>
               </div>

@@ -940,7 +940,7 @@ export default function TvPage() {
           <div className="flex items-center gap-3 bg-white/5 border border-white/10 px-4 py-2 rounded-full backdrop-blur-md">
             <div className="size-2.5 rounded-full bg-emerald-400 animate-pulse" />
             <span className="text-xs font-semibold tracking-wider uppercase text-neutral-300">
-              MenuCast TV Player
+              miniKast TV Player
             </span>
           </div>
 
@@ -996,7 +996,7 @@ export default function TvPage() {
                 Pair this Display
               </h1>
               <p className="text-neutral-400 text-sm mt-2 leading-relaxed">
-                Scan the QR code with your phone or visit the link below to link this display to your MenuCast account.
+                Scan the QR code with your phone or visit the link below to link this display to your miniKast account.
               </p>
             </div>
 
@@ -1062,7 +1062,7 @@ export default function TvPage() {
           <div className="bg-white/5 border border-white/10 rounded-2xl p-6 text-left space-y-3">
             <p className="text-xs uppercase tracking-wider text-neutral-400 font-semibold">Next Step</p>
             <p className="text-sm text-neutral-300 leading-relaxed">
-              Open the <strong>MenuCast Figma Plugin</strong>, select your menu design frame, choose an export mode (Static, Hybrid, or Responsive), and click <span className="text-white font-semibold">&quot;Push Current Frame to TV&quot;</span>.
+              Open the <strong>miniKast Figma Plugin</strong>, select your menu design frame, choose an export mode (Static, Hybrid, or Responsive), and click <span className="text-white font-semibold">&quot;Push Current Frame to TV&quot;</span>.
             </p>
           </div>
 
@@ -1098,7 +1098,7 @@ export default function TvPage() {
             </div>
             <div className="min-w-0">
               <p className="text-[11px] font-semibold text-neutral-400 uppercase tracking-widest leading-tight">
-                MenuCast TV &bull;{" "}
+                miniKast TV &bull;{" "}
                 <span className="text-emerald-400">
                   {menuMode === "hybrid" ? "Hybrid Overlay" : menuMode === "responsive" ? "Responsive Flexbox" : "Static Image"}
                 </span>

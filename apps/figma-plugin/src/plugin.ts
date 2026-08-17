@@ -1,7 +1,7 @@
 // Figma Plugin Main Thread
 // Runs in Figma's sandbox — has access to Figma API and figma.clientStorage, but NOT fetch/DOM
 
-figma.showUI(__html__, { width: 360, height: 420, title: "MenuCast" });
+figma.showUI(__html__, { width: 360, height: 420, title: "miniKast" });
 
 // Send saved credentials to UI on startup
 (async () => {

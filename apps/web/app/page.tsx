@@ -5,7 +5,7 @@ export default function HomePage() {
     <main className="min-h-screen bg-neutral-950 text-white flex flex-col">
       {/* Nav */}
       <nav className="flex items-center justify-between px-8 py-6 border-b border-white/5">
-        <span className="text-xl font-semibold tracking-tight">MenuCast</span>
+        <span className="text-xl font-semibold tracking-tight">miniKast</span>
         <div className="flex items-center gap-4">
           <Link
             href="/login"

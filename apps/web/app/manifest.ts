@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "MenuCast — Digital Menu Management",
-    short_name: "MenuCast",
+    name: "miniKast — Digital Menu Management",
+    short_name: "miniKast",
     description: "Push beautiful digital menus to your restaurant TV in seconds.",
     start_url: "/dashboard",
     display: "standalone",
@@ -40,7 +40,7 @@ export default function manifest(): MetadataRoute.Manifest {
       {
         name: "Dashboard",
         url: "/dashboard",
-        description: "Open MenuCast Dashboard",
+        description: "Open miniKast Dashboard",
       },
       {
         name: "TV Display Player",

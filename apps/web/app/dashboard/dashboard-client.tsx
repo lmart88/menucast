@@ -323,7 +323,7 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
       <nav className="flex items-center justify-between px-6 py-4 border-b border-white/5">
         <Link href="/" className="text-base font-semibold tracking-tight flex items-center gap-2">
           <span className="text-xl">📺</span>
-          <span>MenuCast</span>
+          <span>miniKast</span>
         </Link>
         <div className="flex items-center gap-3">
           {installPrompt && (
@@ -371,7 +371,7 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
             <span className="text-4xl">📺</span>
             <h2 className="text-lg font-medium">No TVs paired yet</h2>
             <p className="text-sm text-neutral-500 max-w-xs">
-              Open MenuCast on your restaurant TV and scan the QR code to pair it.
+              Open miniKast on your restaurant TV and scan the QR code to pair it.
             </p>
             <Link
               href="/tv"
@@ -534,7 +534,7 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
           <div>
             <h2 className="font-semibold text-lg">Figma Plugin Access</h2>
             <p className="text-sm text-neutral-400 mt-1">
-              You can push designs directly from Figma using the MenuCast Plugin or upload images directly above.
+              You can push designs directly from Figma using the miniKast Plugin or upload images directly above.
             </p>
           </div>
 
