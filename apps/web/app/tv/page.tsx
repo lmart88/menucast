@@ -1008,13 +1008,12 @@ export default function TvPage() {
                   Refreshes in {minutes}:{seconds}
                 </span>
               </div>
-              <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex items-center gap-0 flex-wrap">
                 {pairingCode.split("").map((char, idx) => (
                   <span
                     key={idx}
-                    className={`h-14 min-w-10 px-2.5 bg-neutral-950 border ${
-                      char === "-" ? "border-transparent bg-transparent text-neutral-600 text-xl" : "border-neutral-800 text-emerald-400 text-2xl font-bold shadow-inner"
-                    } rounded-xl flex items-center justify-center font-mono`}
+                    className={`h-14 min-w-10 px-2.5 bg-neutral-950 border ${char === "-" ? "border-transparent bg-transparent text-neutral-600 text-xl" : "border-neutral-800 text-emerald-400 text-2xl font-bold shadow-inner"
+                      } rounded-xl flex items-center justify-center font-mono`}
                   >
                     {char}
                   </span>
@@ -1082,17 +1081,15 @@ export default function TvPage() {
 
   return (
     <div
-      className={`relative h-screen w-screen bg-black flex items-center justify-center overflow-hidden select-none transition-all duration-300 ${
-        showControls ? "cursor-default" : "cursor-none"
-      }`}
+      className={`relative h-screen w-screen bg-black flex items-center justify-center overflow-hidden select-none transition-all duration-300 ${showControls ? "cursor-default" : "cursor-none"
+        }`}
       onMouseMove={triggerControls}
       onClick={triggerControls}
     >
       {/* Floating Control Menu Bar */}
       <div
-        className={`fixed top-6 inset-x-0 z-50 flex justify-center px-4 pointer-events-none transition-all duration-500 ease-out ${
-          showControls ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-6 pointer-events-none"
-        }`}
+        className={`fixed top-6 inset-x-0 z-50 flex justify-center px-4 pointer-events-none transition-all duration-500 ease-out ${showControls ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-6 pointer-events-none"
+          }`}
       >
         <div className="pointer-events-auto flex items-center justify-between gap-4 md:gap-8 bg-neutral-900/85 backdrop-blur-xl border border-white/15 shadow-2xl px-5 py-3 rounded-2xl max-w-lg w-full text-white">
           <div className="flex items-center gap-3 min-w-0">
@@ -1163,9 +1160,8 @@ export default function TvPage() {
       {/* MODE 2: Hybrid Overlay (Background Graphic + Scaled Live HTML Text & Prices) */}
       {menuMode === "hybrid" && (
         <div
-          className={`flex items-center justify-center ${
-            isFading ? "opacity-0" : "opacity-100"
-          }`}
+          className={`flex items-center justify-center ${isFading ? "opacity-0" : "opacity-100"
+            }`}
           style={{ width: "100vw", height: "100vh", overflow: "hidden" }}
         >
           <div
@@ -1220,9 +1216,8 @@ export default function TvPage() {
       {/* MODE 3: Responsive AutoLayout HTML & CSS */}
       {menuMode === "responsive" && menuData?.tree && (
         <div
-          className={`transition-opacity duration-300 flex items-center justify-center ${
-            isFading ? "opacity-0" : "opacity-100"
-          }`}
+          className={`transition-opacity duration-300 flex items-center justify-center ${isFading ? "opacity-0" : "opacity-100"
+            }`}
           style={{ width: "100vw", height: "100vh", overflow: "hidden" }}
         >
           <div
