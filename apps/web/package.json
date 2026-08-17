@@ -2,6 +2,7 @@
   "name": "@menucast/web",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@11.9.0",
   "scripts": {
     "dev": "next dev --webpack",
     "dev:https": "next dev --experimental-https --webpack",
