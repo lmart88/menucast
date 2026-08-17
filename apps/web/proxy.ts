@@ -10,8 +10,13 @@ export default auth((req) => {
     return NextResponse.redirect(new URL("/login", req.url));
   }
 
+  // Disable registration: redirect /register to /login
+  if (pathname === "/register") {
+    return NextResponse.redirect(new URL("/login", req.url));
+  }
+
   // Redirect logged-in users away from auth pages
-  if ((pathname === "/login" || pathname === "/register") && isLoggedIn) {
+  if (pathname === "/login" && isLoggedIn) {
     return NextResponse.redirect(new URL("/dashboard", req.url));
   }
 

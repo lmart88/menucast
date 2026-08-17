@@ -82,13 +82,6 @@ function LoginForm() {
             {loading ? "Signing in…" : "Sign in"}
           </button>
         </form>
-
-        <p className="text-center text-sm text-neutral-500">
-          Don&apos;t have an account?{" "}
-          <Link href="/register" className="text-white hover:underline">
-            Create one
-          </Link>
-        </p>
       </div>
     </div>
   );

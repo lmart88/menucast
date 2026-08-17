@@ -7,14 +7,11 @@ export default function HomePage() {
       <nav className="flex items-center justify-between px-8 py-6 border-b border-white/5">
         <span className="text-xl font-semibold tracking-tight">MenuCast</span>
         <div className="flex items-center gap-4">
-          <Link href="/login" className="text-sm text-neutral-400 hover:text-white transition-colors">
-            Sign in
-          </Link>
           <Link
-            href="/register"
+            href="/login"
             className="text-sm bg-white text-neutral-950 px-4 py-2 rounded-lg font-medium hover:bg-neutral-200 transition-colors"
           >
-            Get started
+            Sign in
           </Link>
         </div>
       </nav>
@@ -45,10 +42,10 @@ export default function HomePage() {
             Pair Your TV →
           </Link>
           <Link
-            href="/register"
+            href="/login"
             className="border border-white/10 text-white px-6 py-3 rounded-xl font-medium text-base hover:bg-white/5 transition-all"
           >
-            Create Account
+            Sign in
           </Link>
         </div>
       </section>
