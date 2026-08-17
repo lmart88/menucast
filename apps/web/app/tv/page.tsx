@@ -341,7 +341,7 @@ function ResponsiveNodeView({
           fontSize: node.fontSize ? `${node.fontSize}px` : "16px",
           fontWeight: node.fontWeight || 400,
           color: node.color || "#ffffff",
-          textAlign: (node.textAlign as any) || "left",
+          textAlign: (node.textAlign as React.CSSProperties["textAlign"]) || "left",
           lineHeight: 1.25,
           whiteSpace: "pre-wrap",
           wordBreak: "break-word",
@@ -412,19 +412,32 @@ export default function TvPage() {
   const [showControls, setShowControls] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [windowDimensions, setWindowDimensions] = useState({ width: 1920, height: 1080 });
-  const [installPrompt, setInstallPrompt] = useState<any>(null);
+  const [origin, setOrigin] = useState<string>("");
+  const [installPrompt, setInstallPrompt] = useState<{
+    prompt: () => Promise<void>;
+    userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
+  } | null>(null);
 
   const isInitializingRef = useRef(false);
   const hideControlsTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setOrigin(window.location.origin);
+    }
+  }, []);
+
+  const appUrl = origin || (process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000");
   const pairUrl = `${appUrl}/pair?code=${pairingCode}`;
 
   // Listen for PWA install prompt
   useEffect(() => {
     const handleBeforeInstall = (e: Event) => {
       e.preventDefault();
-      setInstallPrompt(e);
+      setInstallPrompt(e as unknown as {
+        prompt: () => Promise<void>;
+        userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
+      });
     };
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstall);
@@ -519,8 +532,6 @@ export default function TvPage() {
   useEffect(() => {
     if (state !== "displaying") return;
 
-    triggerControls();
-
     const handleActivity = () => {
       triggerControls();
     };
@@ -540,6 +551,24 @@ export default function TvPage() {
       window.removeEventListener("pointermove", handleActivity);
     };
   }, [state, triggerControls]);
+
+  // TV remote & keyboard shortcuts (F for Fullscreen, R for Refresh Code)
+  useEffect(() => {
+    const handleTvKey = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.key === "f" || e.key === "F") {
+        e.preventDefault();
+        toggleFullscreen();
+      } else if (e.key === "r" || e.key === "R") {
+        if (state === "pairing") {
+          e.preventDefault();
+          initTv(true);
+        }
+      }
+    };
+    window.addEventListener("keydown", handleTvKey);
+    return () => window.removeEventListener("keydown", handleTvKey);
+  }, [toggleFullscreen, state]);
 
   // Initialize or refresh pairing code
   async function initTv(forceNew = false) {
@@ -902,53 +931,115 @@ export default function TvPage() {
   // State 1: Pairing Screen
   if (state === "pairing") {
     return (
-      <div className="min-h-screen bg-neutral-950 text-white flex flex-col items-center justify-center p-8 select-none">
-        <div className="fixed top-8 left-8 flex items-center gap-3">
-          <div className="size-3 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="text-sm font-semibold tracking-wider uppercase text-neutral-400">
-            MenuCast TV Player
-          </span>
-        </div>
+      <div className="min-h-screen w-screen bg-neutral-950 text-white flex flex-col items-center justify-between p-6 md:p-12 select-none overflow-hidden relative">
+        {/* Subtle Ambient Background Glow */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="max-w-md w-full text-center space-y-8 animate-in fade-in zoom-in-95 duration-500">
-          <div className="space-y-2">
-            <h1 className="text-4xl font-bold tracking-tight">Pair this Display</h1>
-            <p className="text-neutral-400 text-sm">
-              Scan the QR code or enter the pairing code in your MenuCast dashboard to link this TV.
+        {/* Top Header Bar */}
+        <header className="w-full flex items-center justify-between z-10">
+          <div className="flex items-center gap-3 bg-white/5 border border-white/10 px-4 py-2 rounded-full backdrop-blur-md">
+            <div className="size-2.5 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="text-xs font-semibold tracking-wider uppercase text-neutral-300">
+              MenuCast TV Player
+            </span>
+          </div>
+
+          <div className="flex items-center gap-3 text-xs text-neutral-400">
+            <button
+              onClick={toggleFullscreen}
+              className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 transition-colors flex items-center gap-1.5"
+            >
+              <kbd className="px-1.5 py-0.5 bg-neutral-800 border border-neutral-700 rounded text-[10px] font-mono text-neutral-300">F</kbd>
+              <span>{isFullscreen ? "Exit Fullscreen" : "Fullscreen"}</span>
+            </button>
+            <button
+              onClick={() => initTv(true)}
+              className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 transition-colors flex items-center gap-1.5"
+            >
+              <kbd className="px-1.5 py-0.5 bg-neutral-800 border border-neutral-700 rounded text-[10px] font-mono text-neutral-300">R</kbd>
+              <span>New Code</span>
+            </button>
+          </div>
+        </header>
+
+        {/* Main Pairing Card */}
+        <main className="max-w-4xl w-full grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 items-center my-auto z-10 animate-in fade-in zoom-in-95 duration-500">
+          {/* Left: High-Contrast QR Code Card */}
+          <div className="flex flex-col items-center justify-center">
+            <div className="bg-white p-6 rounded-3xl shadow-2xl shadow-emerald-950/40 border-4 border-white/90">
+              {pairingCode ? (
+                <QRCodeSVG
+                  value={pairUrl}
+                  size={240}
+                  level="H"
+                  includeMargin={false}
+                />
+              ) : (
+                <div className="size-[240px] flex items-center justify-center">
+                  <div className="size-8 rounded-full border-2 border-neutral-800 border-t-transparent animate-spin" />
+                </div>
+              )}
+            </div>
+            <p className="text-xs text-neutral-400 font-medium mt-4 flex items-center gap-2">
+              <span className="size-1.5 rounded-full bg-emerald-400" />
+              Point your phone camera at the QR code
             </p>
           </div>
 
-          <div className="bg-white p-6 rounded-3xl shadow-2xl mx-auto inline-block">
-            {pairingCode && (
-              <QRCodeSVG
-                value={pairUrl}
-                size={220}
-                level="H"
-                includeMargin={false}
-              />
-            )}
-          </div>
+          {/* Right: Step-by-Step Instructions & Code */}
+          <div className="flex flex-col space-y-6 text-left">
+            <div>
+              <span className="text-xs uppercase tracking-widest text-emerald-400 font-semibold">
+                Screen Setup
+              </span>
+              <h1 className="text-3xl md:text-4xl font-bold tracking-tight mt-1">
+                Pair this Display
+              </h1>
+              <p className="text-neutral-400 text-sm mt-2 leading-relaxed">
+                Scan the QR code with your phone or visit the link below to link this display to your MenuCast account.
+              </p>
+            </div>
 
-          <div className="space-y-3">
-            <p className="text-xs uppercase tracking-widest text-neutral-500 font-semibold">
-              Pairing Code
-            </p>
-            <div className="flex items-center justify-center gap-2">
-              {pairingCode.split("").map((digit, idx) => (
-                <span
-                  key={idx}
-                  className="w-12 h-16 bg-neutral-900 border border-neutral-800 rounded-2xl flex items-center justify-center text-3xl font-mono font-bold text-emerald-400 shadow-inner"
-                >
-                  {digit}
+            {/* Pairing Code Big Box */}
+            <div className="bg-neutral-900/90 border border-neutral-800 rounded-2xl p-5 space-y-2.5">
+              <div className="flex items-center justify-between text-xs text-neutral-400 font-medium">
+                <span>Pairing Code</span>
+                <span className="font-mono text-neutral-400">
+                  Refreshes in {minutes}:{seconds}
                 </span>
-              ))}
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                {pairingCode.split("").map((char, idx) => (
+                  <span
+                    key={idx}
+                    className={`h-14 min-w-10 px-2.5 bg-neutral-950 border ${
+                      char === "-" ? "border-transparent bg-transparent text-neutral-600 text-xl" : "border-neutral-800 text-emerald-400 text-2xl font-bold shadow-inner"
+                    } rounded-xl flex items-center justify-center font-mono`}
+                  >
+                    {char}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* Manual Link Fallback */}
+            <div className="bg-white/5 border border-white/10 rounded-xl p-4 text-xs text-neutral-300 space-y-1">
+              <span className="text-neutral-500 uppercase tracking-wider font-semibold text-[10px]">
+                Manual Link
+              </span>
+              <p className="font-mono text-neutral-200 break-all">
+                {appUrl}/pair?code={pairingCode}
+              </p>
             </div>
           </div>
+        </main>
 
-          <p className="text-xs text-neutral-500">
-            Code valid for <span className="font-mono text-neutral-400">{minutes}:{seconds}</span>
-          </p>
-        </div>
+        {/* Footer info bar */}
+        <footer className="w-full text-center text-xs text-neutral-600 z-10 flex items-center justify-center gap-4">
+          <span>TV Mode Active</span>
+          <span>•</span>
+          <span>Auto-reconnecting on signal loss</span>
+        </footer>
       </div>
     );
   }
@@ -972,7 +1063,7 @@ export default function TvPage() {
           <div className="bg-white/5 border border-white/10 rounded-2xl p-6 text-left space-y-3">
             <p className="text-xs uppercase tracking-wider text-neutral-400 font-semibold">Next Step</p>
             <p className="text-sm text-neutral-300 leading-relaxed">
-              Open the <strong>MenuCast Figma Plugin</strong>, select your menu design frame, choose an export mode (Static, Hybrid, or Responsive), and click <span className="text-white font-semibold">"Push Current Frame to TV"</span>.
+              Open the <strong>MenuCast Figma Plugin</strong>, select your menu design frame, choose an export mode (Static, Hybrid, or Responsive), and click <span className="text-white font-semibold">&quot;Push Current Frame to TV&quot;</span>.
             </p>
           </div>
 
@@ -1107,7 +1198,7 @@ export default function TvPage() {
                   fontFamily: el.fontFamily || "inherit",
                   fontWeight: el.fontWeight || 400,
                   color: el.color || "#ffffff",
-                  textAlign: (el.textAlign as any) || "left",
+                  textAlign: (el.textAlign as React.CSSProperties["textAlign"]) || "left",
                   letterSpacing: el.letterSpacing || "normal",
                   lineHeight: el.lineHeight || 1.2,
                   opacity: el.opacity ?? 1,
