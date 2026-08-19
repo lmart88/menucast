@@ -67,9 +67,12 @@ class MainActivity : AppCompatActivity() {
         // 3. Configure Hardware-Accelerated WebView
         setupWebView()
 
-        // 4. Setup Retry button
+        // 4. Setup Action buttons
         binding.retryButton.setOnClickListener {
             loadPlayerUrl()
+        }
+        binding.settingsButton.setOnClickListener {
+            showServerUrlDialog()
         }
 
         // 5. Setup Network Watchdog
@@ -118,6 +121,9 @@ class MainActivity : AppCompatActivity() {
 
     @SuppressLint("SetJavaScriptEnabled")
     private fun setupWebView() {
+        // Enable Chrome remote inspection (chrome://inspect on Mac)
+        WebView.setWebContentsDebuggingEnabled(true)
+
         val webView = binding.webView
         val settings = webView.settings
 
@@ -128,6 +134,13 @@ class MainActivity : AppCompatActivity() {
         settings.mediaPlaybackRequiresUserGesture = false
         settings.allowFileAccess = true
         settings.allowContentAccess = true
+        settings.useWideViewPort = true
+        settings.loadWithOverviewMode = true
+
+        // Disable safe browsing check for private local IPs (Android 8+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            settings.safeBrowsingEnabled = false
+        }
 
         // Cache configuration for fast reload & offline fallback
         settings.cacheMode = WebSettings.LOAD_DEFAULT
@@ -143,7 +156,7 @@ class MainActivity : AppCompatActivity() {
         // WebChromeClient for console logging and JS alerts
         webView.webChromeClient = object : WebChromeClient() {
             override fun onConsoleMessage(consoleMessage: ConsoleMessage?): Boolean {
-                Log.d(TAG, "[WebView Console] ${consoleMessage?.message()} (line ${consoleMessage?.lineNumber()})")
+                Log.d(TAG, "[WebView Console] ${consoleMessage?.message()} (${consoleMessage?.sourceId()}:${consoleMessage?.lineNumber()})")
                 return true
             }
         }
@@ -175,8 +188,20 @@ class MainActivity : AppCompatActivity() {
                 if (request?.isForMainFrame == true) {
                     val errorCode = error?.errorCode ?: -1
                     val description = error?.description ?: "Unknown error"
-                    Log.e(TAG, "Main frame error ($errorCode): $description")
-                    showErrorAndScheduleRetry(description.toString())
+                    Log.e(TAG, "Main frame error ($errorCode): $description for ${request.url}")
+                    showErrorAndScheduleRetry("Failed to load: $description\n(${request.url})")
+                }
+            }
+
+            override fun onReceivedHttpError(
+                view: WebView?,
+                request: WebResourceRequest?,
+                errorResponse: android.webkit.WebResourceResponse?
+            ) {
+                if (request?.isForMainFrame == true) {
+                    val statusCode = errorResponse?.statusCode ?: -1
+                    Log.e(TAG, "HTTP error ($statusCode) for ${request.url}")
+                    showErrorAndScheduleRetry("HTTP Error $statusCode for ${request.url}")
                 }
             }
 

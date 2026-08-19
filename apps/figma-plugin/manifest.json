@@ -1,20 +1,24 @@
 {
   "name": "miniKast",
-  "id": "minikast-plugin",
+  "id": "1671932916869845948",
   "api": "1.0.0",
   "main": "dist/plugin.js",
   "ui": "dist/ui.html",
+  "documentAccess": "dynamic-page",
   "editorType": [
     "figma"
   ],
   "networkAccess": {
     "allowedDomains": [
-      "http://localhost:3000",
+      "https://minikast.com",
+      "https://www.minikast.com",
       "https://bgybedmooslmcfhbpigg.supabase.co"
     ],
-    "reasoning": "We need to access localhost for development and the Supabase API for data retrieval.",
+    "reasoning": "Communicates with the miniKast API and Supabase Storage to authenticate user tokens, list paired TVs, and upload exported menu images.",
     "devAllowedDomains": [
       "http://localhost:3000",
+      "https://minikast.com",
+      "https://www.minikast.com",
       "https://bgybedmooslmcfhbpigg.supabase.co"
     ]
   }
