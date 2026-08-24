@@ -25,6 +25,8 @@ export async function OPTIONS() {
   return new Response(null, { status: 200 });
 }
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: NextRequest) {
   const supabase = createClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -50,7 +52,7 @@ export async function GET(req: NextRequest) {
 
   const { data: tvs, error } = await supabase
     .from("tvs")
-    .select("*, menus(id, image_url, pushed_at)")
+    .select("*, menus(*)")
     .eq("user_id", userId)
     .not("paired_at", "is", null)
     .order("created_at", { ascending: false });
@@ -59,5 +61,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ tvs });
+  const res = NextResponse.json({ tvs });
+  res.headers.set("Cache-Control", "no-store, max-age=0");
+  return res;
 }

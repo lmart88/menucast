@@ -15,17 +15,35 @@ export async function POST(req: NextRequest) {
     { auth: { autoRefreshToken: false, persistSession: false } }
   );
 
-  const { data, error } = await supabase
+  const now = new Date().toISOString();
+  let { data, error } = await supabase
     .from("tvs")
     .update({
       screen_width: Number(screen_width) || null,
       screen_height: Number(screen_height) || null,
       aspect_ratio: aspect_ratio || null,
       orientation: orientation || null,
+      last_seen_at: now,
     })
     .eq("id", tv_id)
     .select()
     .single();
+
+  if (error && (error.message?.includes("last_seen_at") || error.code === "PGRST204")) {
+    const res = await supabase
+      .from("tvs")
+      .update({
+        screen_width: Number(screen_width) || null,
+        screen_height: Number(screen_height) || null,
+        aspect_ratio: aspect_ratio || null,
+        orientation: orientation || null,
+      })
+      .eq("id", tv_id)
+      .select()
+      .single();
+    data = res.data;
+    error = res.error;
+  }
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

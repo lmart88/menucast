@@ -606,8 +606,19 @@ export default function TvPage() {
     async function checkPairedOrInit() {
       const storedPaired = getStoredPairedDevice();
       if (storedPaired?.tv_id) {
+        setTvId(storedPaired.tv_id);
+        if (storedPaired.name) setTvName(storedPaired.name);
+        if (storedPaired.current_menu_url) setMenuUrl(storedPaired.current_menu_url);
+        if (storedPaired.menu_mode) setMenuMode(storedPaired.menu_mode);
+        if (storedPaired.menu_data) setMenuData(storedPaired.menu_data);
+        if (storedPaired.current_menu_url || (storedPaired.menu_mode === "responsive" && storedPaired.menu_data)) {
+          setState("displaying");
+        } else {
+          setState("paired");
+        }
+
         try {
-          const res = await fetch(`/api/tv/status?tv_id=${encodeURIComponent(storedPaired.tv_id)}`);
+          const res = await fetch(`/api/tv/status?tv_id=${encodeURIComponent(storedPaired.tv_id)}`, { cache: "no-store" });
           if (res.ok) {
             const data = await res.json();
             if (data.paired && data.tv_id) {
@@ -760,6 +771,45 @@ export default function TvPage() {
         ...meta,
       }),
     }).catch((err) => console.error("Error reporting screen info:", err));
+  }, [tvId]);
+
+  // Step 3.5: Heartbeat telemetry (ping every 30s and immediately on visible/focus when tvId is active)
+  useEffect(() => {
+    if (!tvId) return;
+
+    const sendHeartbeat = async () => {
+      try {
+        await fetch("/api/tv/heartbeat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ tv_id: tvId }),
+        });
+      } catch (err) {
+        console.error("Failed to send heartbeat:", err);
+      }
+    };
+
+    // Send immediate ping on load/pair
+    sendHeartbeat();
+
+    // Repeat every 30 seconds
+    const interval = setInterval(sendHeartbeat, 30000);
+
+    // Also trigger immediate heartbeat when tab becomes visible or focused
+    const handleVisibilityOrFocus = () => {
+      if (document.visibilityState === "visible") {
+        sendHeartbeat();
+      }
+    };
+
+    window.addEventListener("focus", handleVisibilityOrFocus);
+    document.addEventListener("visibilitychange", handleVisibilityOrFocus);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("focus", handleVisibilityOrFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityOrFocus);
+    };
   }, [tvId]);
 
   // Step 4: Listen for menu pushes and live data updates

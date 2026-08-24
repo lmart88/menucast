@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@menucast/supabase";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const code = searchParams.get("code");
@@ -35,7 +37,16 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ paired: false, tv: null });
   }
 
-  return NextResponse.json({
+  // Update last_seen_at telemetry timestamp on check-in
+  if (tv.id) {
+    const now = new Date().toISOString();
+    await supabase
+      .from("tvs")
+      .update({ last_seen_at: now })
+      .eq("id", tv.id);
+  }
+
+  const res = NextResponse.json({
     paired: !!tv.paired_at,
     tv_id: tv.id,
     name: tv.name,
@@ -43,4 +54,6 @@ export async function GET(req: NextRequest) {
     menu_mode: tv.menu_mode || "static",
     menu_data: tv.menu_data || null,
   });
+  res.headers.set("Cache-Control", "no-store, max-age=0");
+  return res;
 }

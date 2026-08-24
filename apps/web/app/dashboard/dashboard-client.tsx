@@ -1,13 +1,44 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { signOut } from "next-auth/react";
 import Link from "next/link";
+import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@menucast/supabase";
 
 type TV = Database["public"]["Tables"]["tvs"]["Row"] & {
   menus: Database["public"]["Tables"]["menus"]["Row"][];
 };
+
+function isScreenOnline(lastSeenAt?: string | null, pairedAt?: string | null, nowTime = Date.now()): boolean {
+  if (lastSeenAt) {
+    const lastSeen = new Date(lastSeenAt).getTime();
+    if (!isNaN(lastSeen) && nowTime - lastSeen < 60000) {
+      return true;
+    }
+  }
+  // Freshly paired screen within last 60 seconds is immediately online
+  if (pairedAt) {
+    const paired = new Date(pairedAt).getTime();
+    if (!isNaN(paired) && nowTime - paired < 60000) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function formatLastSeen(lastSeenAt?: string | null, pairedAt?: string | null, nowTime = Date.now()): string {
+  const timestamp = lastSeenAt || pairedAt;
+  if (!timestamp) return "Never connected";
+  const lastSeen = new Date(timestamp).getTime();
+  if (isNaN(lastSeen)) return "Unknown";
+  const diffSec = Math.floor((nowTime - lastSeen) / 1000);
+  if (diffSec < 45) return "Just now";
+  if (diffSec < 90) return "1 min ago";
+  if (diffSec < 3600) return `${Math.floor(diffSec / 60)} mins ago`;
+  if (diffSec < 86400) return `${Math.floor(diffSec / 3600)} hours ago`;
+  return `${Math.floor(diffSec / 86400)} days ago`;
+}
 
 interface HybridElement {
   id: string;
@@ -26,12 +57,45 @@ interface Props {
 
 export default function DashboardClient({ initialTvs, hasToken, userName }: Props) {
   const [tvs, setTvs] = useState<TV[]>(initialTvs);
+  const [nowTime, setNowTime] = useState(Date.now());
   const [token, setToken] = useState<string | null>(null);
   const [tokenLoading, setTokenLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [installPrompt, setInstallPrompt] = useState<any>(null);
+
+  // Periodic timer to keep presence status and elapsed timestamps accurate
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNowTime(Date.now());
+    }, 10000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Poll / refresh TV presence periodically
+  const fetchTvs = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/tv/list?_t=${Date.now()}`, {
+        cache: "no-store",
+        headers: { "Pragma": "no-cache" },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.tvs)) {
+          setTvs(data.tvs);
+        }
+      }
+    } catch {
+      // Background poll failure handled silently
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchTvs();
+    const pollInterval = setInterval(fetchTvs, 8000);
+    return () => clearInterval(pollInterval);
+  }, [fetchTvs]);
 
   // Listen for PWA install prompt
   useEffect(() => {
@@ -303,6 +367,9 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
     }
   }
 
+  const currentModalTv = activeScreen ? (tvs.find((t) => t.id === activeScreen.id) || activeScreen) : null;
+  const isModalTvOnline = currentModalTv ? isScreenOnline(currentModalTv.last_seen_at, currentModalTv.paired_at, nowTime) : false;
+
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
       {/* Hidden Card File Input */}
@@ -393,6 +460,7 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
               const menuDataObj = tv.menu_data as any;
               const hasEditableData =
                 mode === "hybrid" && Array.isArray(menuDataObj?.elements) && menuDataObj.elements.length > 0;
+              const isOnline = isScreenOnline(tv.last_seen_at, tv.paired_at, nowTime);
 
               return (
                 <div
@@ -420,13 +488,6 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
                       </div>
                     )}
 
-                    {/* Mode Tag Top Left */}
-                    <div className="absolute top-2 left-2">
-                      <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full border shadow-sm bg-neutral-900/80 backdrop-blur-md text-neutral-300 border-neutral-700">
-                        {hasActiveImage ? "🖼️ Active Menu" : "⏳ Standby"}
-                      </span>
-                    </div>
-
                     {/* Code Tag Top Right */}
                     <div className="absolute top-2 right-2 flex items-center gap-1.5">
                       <span className="bg-black/75 backdrop-blur-md text-[11px] px-2.5 py-1 rounded-full text-emerald-400 border border-emerald-500/20 font-mono font-bold">
@@ -444,23 +505,45 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
 
                   {/* Info & Actions */}
                   <div className="p-4 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <h3 className="font-semibold text-sm text-white flex items-center gap-2">
-                          <span>{tv.name}</span>
-                          {hasActiveImage && (
-                            <span className="size-2 rounded-full bg-emerald-400" title="Screen has active image" />
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="space-y-0.5 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="font-semibold text-sm text-white truncate">
+                            {tv.name}
+                          </h3>
+                          {isOnline ? (
+                            <span
+                              className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                              title={`Online (Heartbeat ${formatLastSeen(tv.last_seen_at, tv.paired_at, nowTime)})`}
+                            >
+                              <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                              Online
+                            </span>
+                          ) : (
+                            <span
+                              className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium bg-neutral-800 text-neutral-400 border border-neutral-700"
+                              title={`Offline (${formatLastSeen(tv.last_seen_at, tv.paired_at, nowTime)})`}
+                            >
+                              <span className="size-1.5 rounded-full bg-neutral-500" />
+                              Offline
+                            </span>
                           )}
-                        </h3>
-                        <p className="text-xs text-neutral-500">
-                          {tv.screen_width && tv.screen_height
-                            ? `${tv.screen_width}×${tv.screen_height} (${tv.aspect_ratio || "16:9"})`
-                            : "Standard 16:9 Display"}
+                        </div>
+                        <p className="text-xs text-neutral-500 flex items-center gap-1.5 flex-wrap">
+                          <span>
+                            {tv.screen_width && tv.screen_height
+                              ? `${tv.screen_width}×${tv.screen_height} (${tv.aspect_ratio || "16:9"})`
+                              : "Standard 16:9 Display"}
+                          </span>
+                          <span className="text-neutral-600">&bull;</span>
+                          <span className={isOnline ? "text-emerald-400/80 font-medium" : "text-neutral-500"}>
+                            {formatLastSeen(tv.last_seen_at, tv.paired_at, nowTime)}
+                          </span>
                         </p>
                       </div>
 
                       {/* Unpair / Delete TV */}
-                      <div>
+                      <div className="shrink-0">
                         {isConfirming ? (
                           <div className="flex items-center gap-1.5">
                             <button
@@ -564,20 +647,39 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
       </div>
 
       {/* Screen Management Modal (Upload New Image & Delete Active Image) */}
-      {activeScreen && (
+      {currentModalTv && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
           <div className="bg-neutral-900 border border-white/15 rounded-2xl max-w-2xl w-full max-h-[92vh] flex flex-col shadow-2xl animate-in fade-in zoom-in-95 duration-200">
             {/* Modal Header */}
             <div className="p-5 border-b border-white/10 flex items-center justify-between">
               <div>
-                <h3 className="text-base font-bold text-white flex items-center gap-2">
-                  <span>📺 Screen: {activeScreen.name}</span>
-                  <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                    {activeScreen.pairing_code}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="text-base font-bold text-white flex items-center gap-2">
+                    <span>📺 Screen: {currentModalTv.name}</span>
+                    <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                      {currentModalTv.pairing_code}
+                    </span>
+                  </h3>
+                  {isModalTvOnline ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                      <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      Online
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-neutral-800 text-neutral-400 border border-neutral-700">
+                      <span className="size-1.5 rounded-full bg-neutral-500" />
+                      Offline
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-neutral-400 mt-1 flex items-center gap-1.5 flex-wrap">
+                  <span>
+                    Resolution: {currentModalTv.screen_width && currentModalTv.screen_height ? `${currentModalTv.screen_width}×${currentModalTv.screen_height} (${currentModalTv.aspect_ratio || "16:9"})` : "1920×1080 (16:9)"}
                   </span>
-                </h3>
-                <p className="text-xs text-neutral-400 mt-0.5">
-                  Resolution: {activeScreen.screen_width && activeScreen.screen_height ? `${activeScreen.screen_width}×${activeScreen.screen_height} (${activeScreen.aspect_ratio || "16:9"})` : "1920×1080 (16:9)"}
+                  <span className="text-neutral-600">&bull;</span>
+                  <span className={isModalTvOnline ? "text-emerald-400/80 font-medium" : "text-neutral-400"}>
+                    Heartbeat: {formatLastSeen(currentModalTv.last_seen_at, currentModalTv.paired_at, nowTime)}
+                  </span>
                 </p>
               </div>
               <button
@@ -599,9 +701,9 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
                   <span className="text-xs uppercase font-semibold tracking-wider text-neutral-400">
                     Currently Displaying
                   </span>
-                  {activeScreen.current_menu_url && (
+                  {currentModalTv.current_menu_url && (
                     <a
-                      href={activeScreen.current_menu_url}
+                      href={currentModalTv.current_menu_url}
                       target="_blank"
                       rel="noreferrer"
                       className="text-xs text-emerald-400 hover:underline"
@@ -612,9 +714,9 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
                 </div>
 
                 <div className="aspect-video bg-neutral-950 border border-white/10 rounded-xl overflow-hidden flex items-center justify-center relative">
-                  {activeScreen.current_menu_url ? (
+                  {currentModalTv.current_menu_url ? (
                     <img
-                      src={activeScreen.current_menu_url}
+                      src={currentModalTv.current_menu_url}
                       alt="Active Menu"
                       className="w-full h-full object-contain"
                     />
@@ -628,7 +730,7 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
                 </div>
 
                 {/* Delete / Clear Active Image Button */}
-                {activeScreen.current_menu_url && (
+                {currentModalTv.current_menu_url && (
                   <div className="pt-2 flex items-center justify-between">
                     <p className="text-xs text-neutral-500">
                       Remove the current menu image from this screen without unpairing the TV.
@@ -636,7 +738,7 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
                     {confirmClearImage ? (
                       <div className="flex items-center gap-2">
                         <button
-                          onClick={() => handleClearImage(activeScreen.id)}
+                          onClick={() => handleClearImage(currentModalTv.id)}
                           disabled={isClearingImage}
                           className="bg-red-500 hover:bg-red-600 text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50 cursor-pointer shadow-md shadow-red-500/20"
                         >
@@ -685,8 +787,8 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
                     e.preventDefault();
                     setDragOver(false);
                     const file = e.dataTransfer.files?.[0];
-                    if (file && activeScreen) {
-                      handleImageUpload(activeScreen.id, file);
+                    if (file) {
+                      handleImageUpload(currentModalTv.id, file);
                     }
                   }}
                   onClick={() => modalFileInputRef.current?.click()}

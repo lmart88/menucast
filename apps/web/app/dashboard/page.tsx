@@ -16,7 +16,7 @@ export default async function DashboardPage() {
 
   const { data: tvs } = await supabase
     .from("tvs")
-    .select("*, menus(id, image_url, pushed_at)")
+    .select("*, menus(*)")
     .eq("user_id", session.user.id)
     .not("paired_at", "is", null)
     .order("created_at", { ascending: false });

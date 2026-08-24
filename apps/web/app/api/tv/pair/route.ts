@@ -64,39 +64,76 @@ export async function POST(req: NextRequest) {
     .single();
 
   let tv;
+  const now = new Date().toISOString();
 
   if (existing) {
-    const { data: updated, error: updateError } = await supabase
+    let { data: updated, error: updateError } = await supabase
       .from("tvs")
       .update({
         user_id: session.user.id,
-        paired_at: new Date().toISOString(),
+        paired_at: now,
+        last_seen_at: now,
         name: tv_name || "My TV",
       })
       .eq("id", existing.id)
       .select()
       .single();
 
+    if (updateError && (updateError.message?.includes("last_seen_at") || updateError.code === "PGRST204")) {
+      const res = await supabase
+        .from("tvs")
+        .update({
+          user_id: session.user.id,
+          paired_at: now,
+          name: tv_name || "My TV",
+        })
+        .eq("id", existing.id)
+        .select()
+        .single();
+      updated = res.data;
+      updateError = res.error;
+    }
+
     if (updateError) {
       return NextResponse.json({ error: updateError.message }, { status: 500 });
     }
     tv = updated;
   } else {
-    const { data: created, error: createError } = await supabase
+    let { data: created, error: createError } = await supabase
       .from("tvs")
       .insert({
         user_id: session.user.id,
         pairing_code: pairing_code,
-        paired_at: new Date().toISOString(),
+        paired_at: now,
+        last_seen_at: now,
         name: tv_name || "My TV",
       })
       .select()
       .single();
 
-    if (createError) {
-      return NextResponse.json({ error: createError.message }, { status: 500 });
+    if (createError && (createError.message?.includes("last_seen_at") || createError.code === "PGRST204")) {
+      const res = await supabase
+        .from("tvs")
+        .insert({
+          user_id: session.user.id,
+          pairing_code: pairing_code,
+          paired_at: now,
+          name: tv_name || "My TV",
+        })
+        .select()
+        .single();
+      created = res.data;
+      createError = res.error;
+    }
+
+    if (createError || !created) {
+      return NextResponse.json({ error: createError?.message || "Failed to create TV record" }, { status: 500 });
     }
     tv = created;
+  }
+
+  if (!tv) {
+    return NextResponse.json({ error: "Failed to pair TV" }, { status: 500 });
   }
 
   // Broadcast to TV client so it transitions from pairing → paired

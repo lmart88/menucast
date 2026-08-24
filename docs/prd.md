@@ -1,29 +1,28 @@
 # Product Requirements Document (PRD) — MenuCast (miniKast)
 
-**Document Status**: `Draft / Ready for Review`  
-**Version**: `1.0.0`  
-**Author**: BMad Product Management (`John`) / Antigravity  
-**Target Delivery**: MVP $\rightarrow$ V1.0 Release  
-**Last Updated**: 2026-08-19  
+**Document Status**: `Approved / In Execution`  
+**Version**: `2.0.0`  
+**Author**: BMad Product Management (`John`) / Lead Architect (`Winston`)  
+**Target Roadmap**: **P0 (POC)** $\rightarrow$ **P1 (MVP)**  
+**Cross-References**: [`docs/ideas.md`](file:///Users/battosai/Dev/menucast/docs/ideas.md) | [`docs/architecture.md`](file:///Users/battosai/Dev/menucast/docs/architecture.md) | [`docs/epics.md`](file:///Users/battosai/Dev/menucast/docs/epics.md) | [`docs/sprint-plan.md`](file:///Users/battosai/Dev/menucast/docs/sprint-plan.md)  
+**Last Updated**: 2026-08-24  
 
 ---
 
 ## 1. Executive Summary & Problem Statement
 
 ### 1.1 The Problem
-Digital signage for restaurants, cafes, bars, and retail spaces is notoriously broken:
-- **Clunky Legacy CMSs**: Existing signage software relies on bloated, proprietary WYSIWYG editors with rigid templates and ugly typography.
-- **Friction in Designer-to-Display Workflow**: Designers create beautiful menus in Figma, export them as static images, email them to restaurant managers, who then manually upload them via thumb drives or complicated dashboards.
-- **High Cost of Hardware**: Commercial signage players (BrightSign, Scala) cost hundreds of dollars per screen with expensive ongoing subscriptions.
-- **Out-of-Date Menus & Pricing**: Changing a simple price or sold-out item takes hours or days, causing customer friction at the register.
+Digital menu boards and signage for restaurants, cafes, bars, and retail spaces are plagued by high costs and clunky workflows:
+- **Clunky Legacy CMSs**: Existing signage software relies on bloated, proprietary WYSIWYG editors with rigid templates and subpar typography.
+- **Friction in Designer-to-Display Workflow**: Designers create beautiful menus in Figma, export them as static images, and manually upload them via USB thumb drives or confusing web portals.
+- **Expensive Hardware**: Commercial signage players (BrightSign, Scala) cost hundreds of dollars per screen with mandatory ongoing subscriptions.
 
 ### 1.2 The Solution: MenuCast (miniKast)
 MenuCast bridges the gap between **Figma design workflows** and **physical TV screens**:
-- **Design Native**: Designers work 100% inside Figma using their established design systems, fonts, and assets.
+- **Design Native**: Designers work 100% inside Figma using their established design systems, fonts, and brand assets.
 - **1-Click Screen Matching**: The Figma plugin detects target screen resolutions and orientations, generating pixel-perfect artboards with one click.
-- **Instant Real-Time Push**: 1-click push from Figma updates live displays across the world in **< 1.5 seconds** via Supabase Realtime WebSockets.
-- **Budget Hardware Friendly**: Runs natively on affordable consumer hardware ($25-$40 Fire TV Sticks, Google Chromecast with Google TV, Android TV, or standard web browsers).
-- **Zero-Flicker Transitions**: Displays smoothly crossfade between incoming graphics using hardware-accelerated GPU opacity transitions.
+- **Instant Real-Time Push**: 1-click push from Figma updates live displays in **< 1.5 seconds** via Supabase Realtime WebSockets.
+- **Budget Hardware Friendly**: Runs natively on affordable consumer hardware ($25–$40 Fire TV Sticks, Google Chromecast with Google TV, Android TV, or standard web browsers).
 
 ---
 
@@ -31,18 +30,11 @@ MenuCast bridges the gap between **Figma design workflows** and **physical TV sc
 
 ### Persona A: The Graphic & Brand Designer ("Maya")
 - **Role**: Freelance or agency designer responsible for restaurant brand identity and menu boards.
-- **Pain Points**: Frustrated when menus lose their font styling, hierarchy, or layout in traditional signage tools. Hates manual multi-step export/import workflows.
 - **Needs**: Native Figma integration, automatic resolution templates, instantaneous visual confirmation that the push succeeded.
 
 ### Persona B: The Restaurant Owner / General Manager ("Carlos")
-- **Role**: Runs a bustling 2-location coffee shop and bakery.
-- **Pain Points**: Needs to update seasonal drinks or mark sold-out pastries without waiting for the designer. Budget-conscious; doesn't want expensive enterprise hardware.
-- **Needs**: Simple 30-second screen pairing, reliable 24/7 uptime that never goes to sleep or shows error dialogs, ability to tweak prices directly if needed.
-
-### Persona C: The Multi-Location Operator ("Elena")
-- **Role**: Manages 10+ franchise restaurant locations with multiple screens per store (e.g. Menu Board 1, Menu Board 2, Promo Board, Bar Specials).
-- **Pain Points**: Hard to keep track of which screen has which content across multiple sites.
-- **Needs**: Screen grouping by location/tag, centralized dashboard, status monitoring (online/offline), scheduled dayparting (Breakfast $\rightarrow$ Lunch $\rightarrow$ Dinner).
+- **Role**: Runs an independent coffee shop, bakery, or fast-casual venue.
+- **Needs**: Simple 30-second screen pairing, reliable 24/7 uptime that never goes to sleep or shows error dialogs, affordable pricing.
 
 ---
 
@@ -51,141 +43,147 @@ MenuCast bridges the gap between **Figma design workflows** and **physical TV sc
 | Metric | Target | Measurement Method |
 | :--- | :--- | :--- |
 | **Push Latency** | $< 1.5$ seconds | Time from clicking "Push" in Figma to image render on TV |
-| **Screen Onboarding Time** | $< 30$ seconds | Time to unbox TV app, scan QR/enter code, and appear in dashboard |
+| **Screen Onboarding Time** | $< 30$ seconds | Time to open TV app, scan QR/enter code, and pair display |
 | **Playback Reliability / Uptime** | $99.9\%$ | Zero crashes, automatic reboot recovery, offline cache resilience |
-| **Transition Quality** | 60 fps / Zero flicker | Double-buffered GPU opacity crossfade, no black frames |
 | **Hardware Footprint** | $< 120$ MB RAM | Monitored inside Android WebView / Chromium container |
 
 ---
 
-## 4. Epics & Functional Requirements
-
-### Epic 1: Screen Pairing & Fleet Management
-*Enable frictionless onboarding, organizing, and monitoring of physical TV displays.*
-
-- **FR-1.1 Pairing Handshake**:
-  - Displays launch into `/tv` and generate an 8-character human-readable pairing code (e.g. `PINE-4821`) alongside a dynamic QR code.
-  - User can scan QR with a mobile phone or enter code at `/pair` to pair the screen to their account in real time.
-- **FR-1.2 Hardware Telemetry**:
-  - TV client automatically detects and reports its physical resolution (`screen_width`, `screen_height`), aspect ratio (`16:9`, `9:16`, `4:3`, `21:9`), and orientation (`Landscape`/`Portrait`).
-- **FR-1.3 Multi-Screen Grouping & Tagging**:
-  - Users can assign TVs to Locations (e.g., "Downtown Store") and Groups (e.g., "Main Menu Boards", "Bar TVs").
-  - Ability to push a single menu layout simultaneously to an entire screen group.
-- **FR-1.4 Screen Status & Remote Diagnostics**:
-  - Live heartbeat indicator (Online / Offline / Last seen).
-  - Remote actions from dashboard: Clear screen, Refresh/Reload, Force re-pair.
-
----
-
-### Epic 2: Figma Plugin (Designer Workstation)
-*Empower designers to manage and deploy digital signage directly from Figma.*
-
-- **FR-2.1 Authentication & Token Management**:
-  - Secure authentication via 64-char API Token stored in `figma.clientStorage`.
-  - Persistent server URL configuration (allowing custom domains or local staging environments).
-- **FR-2.2 Target Display Inspector**:
-  - Real-time dropdown list of user's paired TVs and screen groups.
-  - Visual display of target TV specs (resolution, orientation, aspect ratio).
-- **FR-2.3 1-Click Frame Generator**:
-  - Button to instantly insert a canvas frame matching the selected TV's exact aspect ratio and resolution (e.g. 1920×1080 Landscape or 1080×1920 Portrait) with standard dark background fill.
-- **FR-2.4 1-Click Export & Push**:
-  - Exports selected frame as 2x PNG asset.
-  - Direct upload to Supabase Storage via pre-signed URL.
-  - Triggers WebSocket broadcast to target TV(s) with sub-second feedback in plugin UI.
-
----
-
-### Epic 3: High-Performance TV Display Engine (`apps/web/app/tv` & `apps/tv-android`)
-*Deliver a bulletproof, 24/7 commercial-grade digital signage player.*
-
-- **FR-3.1 Native Kiosk Android / Fire TV App**:
-  - Auto-start on device power-up (`RECEIVE_BOOT_COMPLETED`).
-  - 24/7 screen wake-lock (`FLAG_KEEP_SCREEN_ON`) preventing screen savers or ambient sleep.
-  - Auto-reconnect watchdog that polls and re-establishes connection on Wi-Fi dropouts.
-  - TV Remote shortcuts (`MENU` for settings, `PLAY/PAUSE` or `R` to reload, `BACK` with confirmation modal).
-- **FR-3.2 Zero-Flicker Crossfade Transition**:
-  - Double-buffered image rendering. Pre-fetches incoming image in memory before triggering an 800ms hardware-accelerated cubic-bezier opacity crossfade.
-- **FR-3.3 Offline Cache Resilience**:
-  - Local caching via Service Worker / CacheStorage / `localStorage`. If Wi-Fi goes down or power cycles without internet, the TV continues displaying the last pushed menu.
-- **FR-3.4 Web PWA & Universal Compatibility**:
-  - Operates identically inside web browsers, smart TV native browsers, iPad/tablets, and Raspberry Pi digital signage kits.
-
----
-
-### Epic 4: Scheduling, Dayparting & Playlists *(MVP+ / V1.0)*
-*Automate time-based menu rotations without manual intervention.*
-
-- **FR-4.1 Daypart Scheduling**:
-  - Define time windows for specific menus (e.g., Breakfast 6:00 AM – 11:00 AM, Lunch/Dinner 11:00 AM – 10:00 PM).
-  - Screen automatically transitions when scheduled time arrives.
-- **FR-4.2 Timed Image Playlists / Rotations**:
-  - Configure multi-slide playlists with custom duration per slide (e.g., rotating menu slide 1, menu slide 2, and promo slide every 15 seconds).
-
----
-
-### Epic 5: Hybrid / Live Price Editing *(V1.0)*
-*Enable instantaneous price and text changes without re-exporting Figma graphics.*
-
-- **FR-5.1 Hybrid Layer Rendering**:
-  - Figma plugin parses designated text layers (tagged with `#price` or `#live`) as editable fields while exporting the background graphics as a clean static PNG.
-- **FR-5.2 Dashboard Quick Editor**:
-  - Store managers can edit item prices or mark items as "SOLD OUT" directly from the Web Dashboard on their phone/laptop.
-  - Real-time overlay updates on top of the background graphic on the TV.
-
----
-
-## 5. Non-Functional Requirements (NFRs)
-
-### 5.1 Performance & Latency
-- **Push Pipeline**: Figma export $\rightarrow$ Storage Upload $\rightarrow$ Realtime Event $\rightarrow$ Display Render under $1,500$ ms on standard broadband.
-- **Animation Smoothness**: Smooth 60 FPS transitions without dropped frames on low-end hardware (Quad-core ARM Cortex-A53 / 1.5GB RAM).
-
-### 5.2 Reliability & Availability
-- **24/7 Unattended Playback**: Displays must run continuously for months without memory leaks, memory accumulation, or crash loops.
-- **Fault Tolerance**: Automatic fallback to cached assets if Supabase Storage or WebSocket connections experience temporary outages.
-
-### 5.3 Security & Isolation
-- **Row-Level Security (RLS)**: Strictly enforced on PostgreSQL tables (`tvs`, `menus`, `api_tokens`). Users can only query or push to their own screens.
-- **API Token Authentication**: Hex-encoded cryptographic secrets with automatic revocation and last-used tracking.
-- **Pairing Code Entropy**: Random pairing codes with expiration TTL (10 minutes) to prevent unauthorized screen takeover.
-
----
-
-## 6. Technical Architecture Alignment
-
-- **Frontend / Fullstack**: Next.js 15 App Router with Server Components and API route handlers.
-- **State & Realtime Communication**: Supabase Realtime Channels (`pairing:<code}>` and `tv:<tv_id>`).
-- **Storage**: Supabase Storage (`menus` bucket) serving assets via global CDN.
-- **Figma Integration**: Figma Plugin API running manifest v2 with isolated worker sandbox and UI iframe.
-- **Native TV Client**: Android 8.0+ (API 26+) Kotlin kiosk container using hardware-accelerated Android System WebView.
-
-*(For detailed architecture diagrams and schema definitions, see [`docs/architecture.md`](file:///Users/battosai/Dev/menucast/docs/architecture.md)).*
-
----
-
-## 7. Phased Implementation Roadmap
+## 4. Phased Product Roadmap
 
 ```mermaid
-gantt
-    title MenuCast Product Roadmap
-    dateFormat  YYYY-MM-DD
-    section Phase 1: POC to MVP Hardening
-    Screen Pairing & Fleet Management     :active, p1_1, 2026-08-20, 7d
-    Figma 1-Click Push Refinements         :active, p1_2, 2026-08-20, 7d
-    Offline Cache & Resilience             :p1_3, 2026-08-27, 7d
-    section Phase 2: Core Enhancements (V1.0)
-    Multi-Screen Groups & Broadcast Push   :p2_1, 2026-09-03, 10d
-    Dayparting & Scheduled Playlists       :p2_2, 2026-09-13, 14d
-    Hybrid Text & Live Price Overlays      :p2_3, 2026-09-27, 14d
-    section Phase 3: Enterprise & Integrations (V2.0)
-    Multi-Tenant Workspaces & Roles        :p3_1, 2026-10-11, 14d
-    POS Integrations (Toast, Square, Clover):p3_2, 2026-10-25, 21d
+graph TD
+  subgraph P0["P0: Proof of Concept (POC) — Core Engine"]
+    A1["Screen Pairing (QR + Code)"]
+    A2["Direct Image Upload"]
+    A3["Figma Plugin (Image Push)"]
+    A4["PWA Web Display Player"]
+    A5["Native Android / Fire TV App"]
+  end
+
+  subgraph P1["P1: Commercial MVP Launch"]
+    B1["Marketing Landing Page"]
+    B2["Self-Serve User Accounts"]
+    B3["Extended TV OS Support"]
+    B4["Stripe Payment Subscriptions"]
+  end
+
+  subgraph Ideas["Parked in ideas.md (Post-MVP Backlog)"]
+    C1["Video Upload & Playback"]
+    C2["Push History & Rollback"]
+    C3["Advanced Transitions"]
+    C4["Daypart Schedules & Playlists"]
+    C5["Multi-Screen Fleet Management"]
+    C6["Multi-Screen Synchronization"]
+    C7["Live Menu HTML/CSS Overlays"]
+  end
+
+  P0 --> P1
+  P1 -.-> Ideas
 ```
 
 ---
 
-## 8. Open Questions & Design Decisions
+## 5. Functional Requirements by Release Phase
 
-1. **Multi-Screen Grouping**: Should a screen belong to multiple groups or strictly one group hierarchy (e.g., Location $\rightarrow$ Group $\rightarrow$ TV)? *(Recommended: Tags/Groups model for maximum flexibility).*
-2. **Offline Fallback Storage**: Should the native Android app maintain an on-device disk cache for images in addition to Chromium WebView cache? *(Recommended: Dual-layer caching — Service Worker cache in web + SQLite/file cache in Android).*
-3. **POS Integration Priority**: Which POS system should be prioritized for live price sync (Toast vs. Square vs. Clover)? *(Recommended: Square & Toast via webhook sync).*
+### 🎯 Phase 0: Proof of Concept (POC) — Completed & Verified
+
+The POC establishes the end-to-end technical pipeline from Figma directly to physical TV hardware.
+
+#### FR-0.1 Screen Pairing
+- Displays launch into `/tv` and generate an 8-character human-readable pairing code alongside a dynamic QR code (`/pair?code=<CODE>`).
+- Pairing completes in $< 30$ seconds over Supabase Realtime channel `pairing:<CODE>`.
+- TV automatically reports its physical resolution (`screen_width`, `screen_height`), aspect ratio (`16:9`, `9:16`), and orientation (`Landscape`/`Portrait`).
+
+#### FR-0.2 Direct Image Upload
+- REST API `/api/menu/upload` generates pre-signed upload URLs for Supabase Storage.
+- Direct binary HTTP PUT uploads bypass serverless payload limits.
+- `/api/menu/push` broadcasts `menu:push` to target `tv:<TV_ID>` channel.
+
+#### FR-0.3 Figma Plugin (Image Only)
+- Secure API Token authentication stored in `figma.clientStorage`.
+- Target display selector displaying connected screens and physical specs.
+- 1-click canvas frame generator creating artboards matching the TV's exact aspect ratio and dimensions.
+- 1-click 2x PNG export and push with instantaneous success banner.
+
+#### FR-0.4 Progressive Web App (PWA)
+- Fullscreen display client with manifest and Service Worker caching.
+- Double-buffered image preloading to eliminate frame tearing.
+- `localStorage` device state persistence for instant recovery after power outages.
+
+#### FR-0.5 Native Android TV & Fire TV Kiosk Container
+- Dedicated Kotlin app (`apps/tv-android`) launching on device boot (`RECEIVE_BOOT_COMPLETED`).
+- 24/7 screen wake-lock (`FLAG_KEEP_SCREEN_ON`) preventing system sleep or ambient screensavers.
+- Auto-reconnect watchdog with auto-retry on Wi-Fi dropouts.
+
+---
+
+### 🚀 Phase 1: Commercial MVP — Active Target
+
+The MVP delivers a commercial, self-serve SaaS product ready for public customer onboarding and monetization.
+
+#### FR-1.1 High-Converting Marketing Landing Page (`/`)
+- Modern, responsive landing page showcasing the Figma $\rightarrow$ TV real-time workflow.
+- Interactive hero demonstration / video walkthrough.
+- Feature comparison grid against traditional signage systems.
+- Pricing tiers with clear Call-to-Action (CTA) buttons directing to registration.
+- FAQ section addressing hardware compatibility (Fire TV, Chromecast, Smart TVs).
+
+#### FR-1.2 Self-Serve User Accounts & Authentication
+- User registration and login via Email/Password and social providers (Google/GitHub).
+- Password reset, email verification, and session management.
+- User profile dashboard managing account settings and API tokens.
+- Secure multi-tenant database isolation with PostgreSQL Row-Level Security (RLS).
+
+#### FR-1.3 Extended TV OS Support
+- Native and packaged container distribution for major smart TV operating systems:
+  - **Amazon Fire TV** (Amazon Appstore APK distribution).
+  - **Google TV / Android TV** (Google Play Store distribution).
+  - **Apple TV (tvOS)** (Dedicated SwiftUI / WKWebView client).
+  - **Smart TV Web Browsers** (Optimized PWA launcher for LG webOS & Samsung Tizen).
+
+#### FR-1.4 Stripe Payment Subscriptions & Billing Portal
+- Tiered subscription plans (e.g. Free 1-Screen Starter, Pro Monthly/Annual per-screen tiers).
+- Stripe Checkout integration for seamless plan upgrades.
+- Stripe Customer Portal for managing payment methods, viewing invoices, and upgrading/canceling subscriptions.
+- Automated subscription entitlement gating (enforcing screen limits per active plan).
+
+---
+
+## 6. Features Deferred to Backlog ([`docs/ideas.md`](file:///Users/battosai/Dev/menucast/docs/ideas.md))
+
+The following items are deferred to [`docs/ideas.md`](file:///Users/battosai/Dev/menucast/docs/ideas.md) to keep the MVP laser-focused:
+
+| Feature | Category | Reason for Deferral |
+| :--- | :--- | :--- |
+| **Video Upload** | Player / Storage | High bandwidth/storage costs; static 2x graphics satisfy 90% of core restaurant use cases. |
+| **Push History & Rollback** | Versioning | Nice-to-have; single active menu graphic is sufficient for MVP. |
+| **Advanced Transitions** | Display Engine | Standard double-buffered crossfade is already zero-flicker and optimal. |
+| **Schedule & Dayparting** | Automation | Scheduled playlists add complexity; manual 1-click Figma push solves immediate needs. |
+| **Multi-Screen Fleet Management** | Fleet Scale | Single/few screen management covers initial single-venue target customers. |
+| **Multi-Screen Synchronization** | Network Sync | Frame-accurate video wall sync requires specialized local network clustering. |
+| **Live Menu (HTML/CSS Overlays)** | Rendering | Direct 2x image push from Figma ensures 100% typographic fidelity without CSS emulation. |
+
+---
+
+## 7. Non-Functional Requirements (NFRs)
+
+### 7.1 Performance & Latency
+- **Push Latency**: Figma export $\rightarrow$ Storage Upload $\rightarrow$ Realtime Event $\rightarrow$ Display Render under $1,500$ ms.
+- **Player Memory**: $< 120$ MB RAM footprint on Android TV / Fire TV hardware.
+
+### 7.2 Security & Isolation
+- **Row-Level Security (RLS)**: Strictly enforced on all PostgreSQL tables.
+- **Subscription Entitlements**: Server-side validation preventing pairing beyond plan limits.
+- **API Token Security**: Hex-encoded cryptographic tokens with last-used tracking.
+
+---
+
+## 8. Technical Architecture Alignment
+
+- **Frontend & Marketing**: Next.js 15 App Router, React 19, TailwindCSS, Lucide Icons.
+- **Auth & Billing**: NextAuth.js / Supabase Auth + Stripe Billing API & Webhooks.
+- **Database & Realtime**: Supabase (PostgreSQL 15+) with Row-Level Security and Realtime WebSockets.
+- **Storage**: Supabase Storage (`menus` bucket) with CDN distribution.
+- **Figma Plugin**: TypeScript, Figma Plugin Manifest v2, esbuild.
+- **TV Clients**: Android TV / Fire TV (Kotlin WebView container), Apple TV (tvOS), and Universal PWA.

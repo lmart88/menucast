@@ -23,6 +23,7 @@ export interface Database {
           screen_height?: number | null;
           aspect_ratio?: string | null;
           orientation?: string | null;
+          last_seen_at?: string | null;
           created_at: string;
         };
         Insert: {
@@ -38,6 +39,7 @@ export interface Database {
           screen_height?: number | null;
           aspect_ratio?: string | null;
           orientation?: string | null;
+          last_seen_at?: string | null;
           created_at?: string;
         };
         Update: {
@@ -53,9 +55,18 @@ export interface Database {
           screen_height?: number | null;
           aspect_ratio?: string | null;
           orientation?: string | null;
+          last_seen_at?: string | null;
           created_at?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "tvs_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          }
+        ];
       };
       menus: {
         Row: {
@@ -85,7 +96,15 @@ export interface Database {
           pushed_at?: string;
           pushed_by?: string | null;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "menus_tv_id_fkey";
+            columns: ["tv_id"];
+            isOneToOne: false;
+            referencedRelation: "tvs";
+            referencedColumns: ["id"];
+          }
+        ];
       };
       api_tokens: {
         Row: {
@@ -112,7 +131,89 @@ export interface Database {
           created_at?: string;
           last_used_at?: string | null;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "api_tokens_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      screen_groups: {
+        Row: {
+          id: string;
+          user_id: string;
+          name: string;
+          description: string | null;
+          color: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          name: string;
+          description?: string | null;
+          color?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          name?: string;
+          description?: string | null;
+          color?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "screen_groups_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      tv_group_memberships: {
+        Row: {
+          id: string;
+          group_id: string;
+          tv_id: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          group_id: string;
+          tv_id: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          group_id?: string;
+          tv_id?: string;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "tv_group_memberships_group_id_fkey";
+            columns: ["group_id"];
+            isOneToOne: false;
+            referencedRelation: "screen_groups";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "tv_group_memberships_tv_id_fkey";
+            columns: ["tv_id"];
+            isOneToOne: false;
+            referencedRelation: "tvs";
+            referencedColumns: ["id"];
+          }
+        ];
       };
     };
     Views: Record<string, never>;

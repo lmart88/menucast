@@ -31,3 +31,6 @@ Welcome to the **MenuCast (miniKast)** technical and architecture documentation.
    - Core development rules, constraints, and environment configuration.
    - Build commands and monorepo scripts for all packages.
    - Invariants for display engine performance and Figma sandbox communication.
+
+7. [**Feature Ideas & Parking Lot**](file:///Users/battosai/Dev/menucast/docs/ideas.md)
+   - Centralized parking lot to capture raw ideas, UX enhancements, feature requests, and technical explorations.
