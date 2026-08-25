@@ -40,6 +40,21 @@ function formatLastSeen(lastSeenAt?: string | null, pairedAt?: string | null, no
   return `${Math.floor(diffSec / 86400)} days ago`;
 }
 
+function formatScreenSpecs(tv?: {
+  screen_width?: number | null;
+  screen_height?: number | null;
+  aspect_ratio?: string | null;
+  orientation?: string | null;
+} | null): string {
+  if (!tv) return "16:9 1920x1080 Landscape";
+  const width = tv.screen_width || 1920;
+  const height = tv.screen_height || 1080;
+  const ratio = tv.aspect_ratio || (width >= height ? "16:9" : "9:16");
+  const orientation = tv.orientation || (width >= height ? "Landscape" : "Portrait");
+
+  return `${ratio} ${width}x${height} ${orientation}`;
+}
+
 interface HybridElement {
   id: string;
   name: string;
@@ -530,11 +545,7 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
                           )}
                         </div>
                         <p className="text-xs text-neutral-500 flex items-center gap-1.5 flex-wrap">
-                          <span>
-                            {tv.screen_width && tv.screen_height
-                              ? `${tv.screen_width}×${tv.screen_height} (${tv.aspect_ratio || "16:9"})`
-                              : "Standard 16:9 Display"}
-                          </span>
+                          <span>{formatScreenSpecs(tv)}</span>
                           <span className="text-neutral-600">&bull;</span>
                           <span className={isOnline ? "text-emerald-400/80 font-medium" : "text-neutral-500"}>
                             {formatLastSeen(tv.last_seen_at, tv.paired_at, nowTime)}
@@ -673,9 +684,7 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
                   )}
                 </div>
                 <p className="text-xs text-neutral-400 mt-1 flex items-center gap-1.5 flex-wrap">
-                  <span>
-                    Resolution: {currentModalTv.screen_width && currentModalTv.screen_height ? `${currentModalTv.screen_width}×${currentModalTv.screen_height} (${currentModalTv.aspect_ratio || "16:9"})` : "1920×1080 (16:9)"}
-                  </span>
+                  <span>{formatScreenSpecs(currentModalTv)}</span>
                   <span className="text-neutral-600">&bull;</span>
                   <span className={isModalTvOnline ? "text-emerald-400/80 font-medium" : "text-neutral-400"}>
                     Heartbeat: {formatLastSeen(currentModalTv.last_seen_at, currentModalTv.paired_at, nowTime)}

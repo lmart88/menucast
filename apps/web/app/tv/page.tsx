@@ -587,7 +587,12 @@ export default function TvPage() {
     }
 
     try {
-      const res = await fetch("/api/tv/init", { method: "POST" });
+      const meta = getScreenMetadata();
+      const res = await fetch("/api/tv/init", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(meta || {}),
+      });
       const data = await res.json();
       const expiration = Date.now() + PAIRING_CODE_TTL_MS;
       saveStoredPairing(data.pairing_code, expiration);
