@@ -54,7 +54,7 @@ export default function HomePage() {
       <section className="border-t border-white/5 grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-white/5">
         {[
           { icon: "📱", title: "Scan to pair", desc: "Open on your TV, scan the QR code with your phone. Done in 30 seconds." },
-          { icon: "🎨", title: "Design in Figma", desc: "Use your existing Figma workflow. Our plugin handles the rest." },
+          { icon: "🎨", title: "Push your design", desc: "Upload your design or push it from Figma to your TV screen." },
           { icon: "⚡️", title: "Instant updates", desc: "Push a new menu and your TV updates in real-time. No refresh needed." },
         ].map((f) => (
           <div key={f.title} className="px-8 py-10 flex flex-col gap-3">
