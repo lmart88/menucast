@@ -17,6 +17,22 @@ function ArrowIcon() {
   return <svg aria-hidden="true" viewBox="0 0 20 20" className="arrow-icon" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M3 10h13M11 5l5 5-5 5" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 }
 
+function ThemeAwareLogo({ theme }: { theme: Theme }) {
+  const [logoSource, setLogoSource] = useState("");
+
+  useEffect(() => {
+    fetch("/menucast-logo.svg")
+      .then((response) => response.text())
+      .then(setLogoSource)
+      .catch(() => setLogoSource(""));
+  }, []);
+
+  const unionFill = theme === "dark" ? "#fff" : "#0d1f21";
+  const logoMarkup = logoSource.replace(/(<path id="Union"[^>]*fill=")[^"]+/, `$1${unionFill}`);
+
+  return <span className="logo-svg" aria-hidden="true" dangerouslySetInnerHTML={{ __html: logoMarkup }} />;
+}
+
 function SourceIcon({ kind }: { kind: "image" | "pdf" | "video" | "figma" }) {
   return <span className={`source-icon source-icon-${kind}`} aria-hidden="true">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
@@ -63,7 +79,7 @@ export default function HomePage() {
   return <main className="home-shell">
     <div className="home-noise" aria-hidden="true" />
     <header className="home-header">
-      <Link href="/" className="wordmark" aria-label="MenuCast home"><img src="/menucast-logo.svg" alt="" /></Link>
+      <Link href="/" className="wordmark" aria-label="MenuCast home"><ThemeAwareLogo theme={theme} /></Link>
       <nav className="header-actions" aria-label="Main navigation">
         <button className="theme-toggle" type="button" aria-label={`Switch to ${nextTheme} theme`} onClick={() => setTheme(nextTheme)}>
           {theme === "light" ? <MoonIcon /> : <SunIcon />}

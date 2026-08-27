@@ -40,7 +40,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .home-header, .hero-section, .platform-section, .home-footer { width: calc(100% - 128px); max-width: 806px; margin-inline: auto; position: relative; }
 .home-header { min-height: 72px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); }
 .wordmark { width: 139px; height: 44px; min-width: 0; display: flex; align-items: center; }
-.wordmark img { display: block; width: 90px; max-width: 100%; height: auto; aspect-ratio: 9 / 2; }
+.logo-svg, .logo-svg svg { display: block; width: 90px; max-width: 100%; height: 20px; }
 .menu-mark { display: inline-grid; place-items: center; color: white; background: var(--accent); font-family: Georgia, serif; font-style: italic; font-weight: 700; border-radius: 5px; }
 .header-actions { display: flex; align-items: center; gap: 20px; }
 .theme-toggle { width: 40px; height: 40px; padding: 8px; color: var(--foreground); background: transparent; border: 0; border-radius: 8px; cursor: pointer; }
