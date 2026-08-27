@@ -1,69 +1,98 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useState } from "react";
+
+type Theme = "light" | "dark";
+
+function SunIcon() {
+  return <svg aria-hidden="true" viewBox="0 0 24 24" className="icon" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42" strokeLinecap="round" /></svg>;
+}
+
+function MoonIcon() {
+  return <svg aria-hidden="true" viewBox="0 0 24 24" className="icon" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M20.4 15.4A8.5 8.5 0 0 1 8.6 3.6 8.5 8.5 0 1 0 20.4 15.4Z" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+}
+
+function ArrowIcon() {
+  return <svg aria-hidden="true" viewBox="0 0 20 20" className="arrow-icon" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M3 10h13M11 5l5 5-5 5" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+}
+
+function SourceIcon({ kind }: { kind: "image" | "pdf" | "video" | "figma" }) {
+  return <span className={`source-icon source-icon-${kind}`} aria-hidden="true">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+      {kind === "image" && <><rect x="4" y="5" width="16" height="14" rx="2" /><circle cx="9" cy="10" r="1.4" /><path d="m5 17 4-4 3 3 2-2 5 4" /></>}
+      {kind === "pdf" && <><path d="M7 3h7l3 3v15H7z" /><path d="M14 3v4h4M9 15h6M9 11h3" /></>}
+      {kind === "video" && <><rect x="3.5" y="5" width="17" height="14" rx="2" /><path d="m10 9 5 3-5 3z" /></>}
+      {kind === "figma" && <><path d="M9 3h3v6H9a3 3 0 1 1 0-6ZM12 3h3a3 3 0 1 1 0 6h-3zM9 9h3v6H9a3 3 0 1 1 0-6ZM12 9h3a3 3 0 1 1 0 6h-3zM9 15h3v3a3 3 0 1 1-3-3Z" /></>}
+    </svg>
+  </span>;
+}
+
+function DemoMenu() {
+  return <div className="menu-art" role="img" aria-label="Example digital menu displayed on a TV">
+    <div className="menu-brand"><span className="menu-mark">m</span><span>morning ritual</span></div>
+    <div className="menu-heading">GOOD FOOD<br /><em>GOOD MOOD</em></div>
+    <div className="menu-items"><span>AVOCADO TOAST <b>$12</b></span><span>RICOTTA PANCAKES <b>$14</b></span><span>SEASONAL BOWL <b>$16</b></span></div>
+    <div className="menu-footer">BRUNCH · COFFEE · GOOD COMPANY</div>
+  </div>;
+}
+
+const platforms = ["Web", "Android TV", "Fire TV", "Apple TV", "Smart TVs"];
 
 export default function HomePage() {
-  return (
-    <main className="min-h-screen bg-neutral-950 text-white flex flex-col">
-      {/* Nav */}
-      <nav className="flex items-center justify-between px-8 py-6 border-b border-white/5">
-        <span className="text-xl font-semibold tracking-tight">miniKast</span>
-        <div className="flex items-center gap-4">
-          <Link
-            href="/login"
-            className="text-sm bg-white text-neutral-950 px-4 py-2 rounded-lg font-medium hover:bg-neutral-200 transition-colors"
-          >
-            Sign in
-          </Link>
-        </div>
+  const [theme, setTheme] = useState<Theme>(() => {
+    if (typeof window === "undefined") return "light";
+    try {
+      return window.localStorage.getItem("menucast-theme") === "dark" ? "dark" : "light";
+    } catch {
+      return "light";
+    }
+  });
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    try {
+      window.localStorage.setItem("menucast-theme", theme);
+    } catch {
+      // Theme switching still works for the current session when storage is blocked.
+    }
+  }, [theme]);
+
+  const nextTheme = theme === "light" ? "dark" : "light";
+
+  return <main className="home-shell">
+    <div className="home-noise" aria-hidden="true" />
+    <header className="home-header">
+      <Link href="/" className="wordmark" aria-label="MenuCast home"><span className="wordmark-mark">m</span><span>menu<span>cast</span></span></Link>
+      <nav className="header-actions" aria-label="Main navigation">
+        <button className="theme-toggle" type="button" aria-label={`Switch to ${nextTheme} theme`} onClick={() => setTheme(nextTheme)}>
+          {theme === "light" ? <MoonIcon /> : <SunIcon />}
+        </button>
+        <Link href="/login" className="sign-in">Sign in</Link>
       </nav>
+    </header>
 
-      {/* Hero */}
-      <section className="flex-1 flex flex-col items-center justify-center text-center px-4 py-24 gap-8">
-        <div className="inline-flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-4 py-1.5 text-sm text-neutral-400">
-          <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
-          Digital menus, live on your TV
+    <section className="hero-section">
+      <div className="hero-copy">
+        <p className="eyebrow"><span className="status-dot" /> Designed in Figma. Live on your display.</p>
+        <h1>Your menu.<br /><span>Any TV. Instantly.</span></h1>
+        <p className="hero-description">Upload your design. Publish to your screen. Just beautiful menus on display.</p>
+      </div>
+
+      <div className="demo-wrap">
+        <div className="demo-display"><DemoMenu /></div>
+        <div className="source-cues" aria-label="Supported source formats">
+          {(["image", "pdf", "video", "figma"] as const).map((kind) => <span className="source-tile" key={kind} role="img" aria-label={`${kind.toUpperCase()} source format`}><SourceIcon kind={kind} /></span>)}
         </div>
+        <Link href="/pair" className="pair-button">Pair Your TV <ArrowIcon /></Link>
+      </div>
+    </section>
 
-        <h1 className="text-5xl md:text-7xl font-bold tracking-tight max-w-4xl leading-[1.05]">
-          Your menu.
-          <br />
-          <span className="text-neutral-500">Any TV. Instantly.</span>
-        </h1>
+    <section className="platform-section" aria-labelledby="platform-title">
+      <p id="platform-title">Available on</p>
+      <div className="platform-list">{platforms.map((platform) => <span key={platform} className="platform-item"><span className="platform-symbol" aria-hidden="true" />{platform}</span>)}</div>
+    </section>
 
-        <p className="text-lg text-neutral-400 max-w-xl leading-relaxed">
-          Design your restaurant menu in Figma, publish it to your TV in one click.
-          No hardware. No tech skills. Just beautiful menus your guests will love.
-        </p>
-
-        <div className="flex flex-col sm:flex-row items-center gap-3">
-          <Link
-            href="/tv"
-            className="bg-white text-neutral-950 px-6 py-3 rounded-xl font-semibold text-base hover:bg-neutral-200 transition-all hover:scale-[1.02] active:scale-[0.98]"
-          >
-            Pair Your TV →
-          </Link>
-          <Link
-            href="/login"
-            className="border border-white/10 text-white px-6 py-3 rounded-xl font-medium text-base hover:bg-white/5 transition-all"
-          >
-            Sign in
-          </Link>
-        </div>
-      </section>
-
-      {/* Feature strip */}
-      <section className="border-t border-white/5 grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-white/5">
-        {[
-          { icon: "📱", title: "Scan to pair", desc: "Open on your TV, scan the QR code with your phone. Done in 30 seconds." },
-          { icon: "🎨", title: "Push your design", desc: "Upload your design or push it from Figma to your TV screen." },
-          { icon: "⚡️", title: "Instant updates", desc: "Push a new menu and your TV updates in real-time. No refresh needed." },
-        ].map((f) => (
-          <div key={f.title} className="px-8 py-10 flex flex-col gap-3">
-            <span className="text-2xl">{f.icon}</span>
-            <h3 className="font-semibold text-white">{f.title}</h3>
-            <p className="text-sm text-neutral-500 leading-relaxed">{f.desc}</p>
-          </div>
-        ))}
-      </section>
-    </main>
-  );
+    <footer className="home-footer"><span>© 2026 MenuCast. All rights reserved.</span><span>Contact: <a href="mailto:hello@menucast.com">hello@menucast.com</a></span></footer>
+  </main>;
 }
