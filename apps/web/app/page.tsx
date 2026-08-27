@@ -63,7 +63,7 @@ export default function HomePage() {
   return <main className="home-shell">
     <div className="home-noise" aria-hidden="true" />
     <header className="home-header">
-      <Link href="/" className="wordmark" aria-label="MenuCast home"><span className="wordmark-mark">m</span><span>menu<span>cast</span></span></Link>
+      <Link href="/" className="wordmark" aria-label="MenuCast home"><img src="/menucast-logo.svg" alt="" /></Link>
       <nav className="header-actions" aria-label="Main navigation">
         <button className="theme-toggle" type="button" aria-label={`Switch to ${nextTheme} theme`} onClick={() => setTheme(nextTheme)}>
           {theme === "light" ? <MoonIcon /> : <SunIcon />}
