@@ -11,7 +11,7 @@ function ResetPasswordForm() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [accessToken, setAccessToken] = useState("");
-  const [refreshToken, setRefreshToken] = useState("");
+  const [tokenHash, setTokenHash] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -19,31 +19,44 @@ function ResetPasswordForm() {
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    // Parse Supabase recovery tokens from URL hash or search params
     if (typeof window !== "undefined") {
       const hash = window.location.hash.substring(1);
       const hashParams = new URLSearchParams(hash);
       
       const token = hashParams.get("access_token") || searchParams.get("token") || searchParams.get("code") || "";
-      const refresh = hashParams.get("refresh_token") || "";
+      const tHash = searchParams.get("token_hash") || hashParams.get("token_hash") || "";
+      const emailParam = searchParams.get("email") || hashParams.get("email") || "";
       
-      if (token) {
-        setAccessToken(token);
-      }
-      if (refresh) {
-        setRefreshToken(refresh);
-      }
+      if (token) setAccessToken(token);
+      if (tHash) setTokenHash(tHash);
+      if (emailParam) setEmail(decodeURIComponent(emailParam));
 
-      // Try to get user email if Supabase session is established
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
       const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-      if (supabaseUrl && supabaseKey && token) {
+
+      if (supabaseUrl && supabaseKey) {
         const client = createSupabaseClient(supabaseUrl, supabaseKey);
-        client.auth.getUser(token).then(({ data }) => {
-          if (data?.user?.email) {
-            setEmail(data.user.email);
-          }
-        }).catch(() => {});
+
+        // If token_hash is available, verify OTP to establish recovery session
+        if (tHash) {
+          client.auth.verifyOtp({ token_hash: tHash, type: "recovery" }).then(({ data, error: otpError }) => {
+            if (data?.user?.email) {
+              setEmail(data.user.email);
+            }
+            if (data?.session?.access_token) {
+              setAccessToken(data.session.access_token);
+            }
+            if (otpError) {
+              console.warn("verifyOtp warning:", otpError.message);
+            }
+          });
+        } else if (token) {
+          client.auth.getUser(token).then(({ data }) => {
+            if (data?.user?.email) {
+              setEmail(data.user.email);
+            }
+          }).catch(() => {});
+        }
       }
     }
   }, [searchParams]);
@@ -65,47 +78,50 @@ function ResetPasswordForm() {
     setLoading(true);
 
     try {
-      // First attempt: call local API with access token
-      const res = await fetch("/api/auth/reset-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          password,
-          access_token: accessToken,
-          refresh_token: refreshToken,
-        }),
-      });
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-      const data = await res.json();
+      if (supabaseUrl && supabaseKey) {
+        const client = createSupabaseClient(supabaseUrl, supabaseKey);
 
-      if (!res.ok) {
-        // Fallback: try client-side Supabase update if session is stored in cookies/localStorage
-        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-        const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-        if (supabaseUrl && supabaseKey) {
-          const client = createSupabaseClient(supabaseUrl, supabaseKey);
-          if (accessToken) {
-            await client.auth.setSession({ access_token: accessToken, refresh_token: refreshToken || accessToken });
-          }
-          const { error: clientError } = await client.auth.updateUser({ password });
-          if (!clientError) {
-            setSuccess(true);
-            setLoading(false);
-            setTimeout(() => router.push("/login?reset=success"), 2000);
-            return;
-          }
+        // If token_hash was present, verify it if not already verified
+        if (tokenHash) {
+          await client.auth.verifyOtp({ token_hash: tokenHash, type: "recovery" });
+        } else if (accessToken) {
+          await client.auth.setSession({ access_token: accessToken, refresh_token: accessToken });
         }
 
-        setError(data.error || "Failed to reset password. The link may have expired.");
-        setLoading(false);
-        return;
+        const { error: clientError } = await client.auth.updateUser({ password });
+        if (!clientError) {
+          setSuccess(true);
+          setLoading(false);
+          setTimeout(() => router.push("/login?reset=success"), 2000);
+          return;
+        }
       }
 
-      setSuccess(true);
+      // Fallback: try server endpoint with accessToken
+      if (accessToken) {
+        const res = await fetch("/api/auth/reset-password", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            password,
+            access_token: accessToken,
+          }),
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+          setSuccess(true);
+          setLoading(false);
+          setTimeout(() => router.push("/login?reset=success"), 2000);
+          return;
+        }
+      }
+
+      setError("Failed to reset password. The link may have expired. Please request a new link.");
       setLoading(false);
-      setTimeout(() => {
-        router.push("/login?reset=success");
-      }, 2000);
     } catch {
       setError("An unexpected error occurred. Please try again.");
       setLoading(false);

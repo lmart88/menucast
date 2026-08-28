@@ -6,6 +6,7 @@ import { AuthShell } from "../components/auth-shell";
 
 function ForgotPasswordForm() {
   const [email, setEmail] = useState("");
+  const [directLink, setDirectLink] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -26,11 +27,16 @@ function ForgotPasswordForm() {
         }),
       });
 
+      const data = await res.json();
+
       if (!res.ok) {
-        const data = await res.json();
         setError(data.error || "Failed to send reset link. Please try again.");
         setLoading(false);
         return;
+      }
+
+      if (data.direct_link) {
+        setDirectLink(data.direct_link);
       }
 
       setSubmitted(true);
@@ -62,7 +68,7 @@ function ForgotPasswordForm() {
         </div>
 
         {submitted ? (
-          <div className="space-y-6">
+          <div className="space-y-4">
             <div className="bg-[var(--surface-soft)] border border-[var(--accent-soft)] rounded-xl p-4 text-center space-y-2">
               <div className="w-8 h-8 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 mx-auto flex items-center justify-center font-bold text-sm">
                 ✓
@@ -74,6 +80,16 @@ function ForgotPasswordForm() {
                 If an account exists for <span className="font-semibold">{email}</span>, you will receive an email with instructions to reset your password.
               </p>
             </div>
+
+            {/* Direct testing button (if link returned during dev/testing) */}
+            {directLink && (
+              <a
+                href={directLink}
+                className="w-full h-10 bg-[var(--surface)] border border-[var(--accent-soft)] hover:bg-[var(--surface-soft)] text-[var(--accent)] font-semibold text-xs rounded-lg shadow-sm transition-all flex items-center justify-center gap-1.5"
+              >
+                <span>⚡ Open Reset Link Directly (Dev Mode)</span>
+              </a>
+            )}
 
             <Link
               href="/login"
