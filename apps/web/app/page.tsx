@@ -47,12 +47,19 @@ function SourceIcon({ kind }: { kind: "image" | "pdf" | "video" | "figma" }) {
 }
 
 function DemoMenu() {
-  return <div className="menu-art" role="img" aria-label="Example digital menu displayed on a TV">
-    <div className="menu-brand"><span className="menu-mark">m</span><span>morning ritual</span></div>
-    <div className="menu-heading">GOOD FOOD<br /><em>GOOD MOOD</em></div>
-    <div className="menu-items"><span>AVOCADO TOAST <b>$12</b></span><span>RICOTTA PANCAKES <b>$14</b></span><span>SEASONAL BOWL <b>$16</b></span></div>
-    <div className="menu-footer">BRUNCH · COFFEE · GOOD COMPANY</div>
-  </div>;
+  return <div>
+    <img src="/logo-minikast.svg" alt="miniKast logo" />
+      <div className="menu-art-container">
+        <div className="menu-art-noise" aria-hidden="true">
+          <div className="menu-art" role="img" aria-label="Example digital menu displayed on a TV">
+            <div className="menu-brand"><span className="menu-mark">m</span><span>morning ritual</span></div>
+            <div className="menu-heading">GOOD FOOD<br /><em>GOOD MOOD</em></div>
+            <div className="menu-items"><span>AVOCADO TOAST <b>$12</b></span><span>RICOTTA PANCAKES <b>$14</b></span><span>SEASONAL BOWL <b>$16</b></span></div>
+            <div className="menu-footer">BRUNCH · COFFEE · GOOD COMPANY</div>
+          </div>
+        </div>
+      </div>
+  </div>
 }
 
 const platforms = [
@@ -64,23 +71,32 @@ const platforms = [
 ];
 
 export default function HomePage() {
-  const [theme, setTheme] = useState<Theme>(() => {
-    if (typeof window === "undefined") return "light";
+  const [theme, setTheme] = useState<Theme>("light");
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  // Initialize theme after hydration to avoid mismatch
+  useEffect(() => {
+    setIsHydrated(true);
     try {
-      return window.localStorage.getItem("menucast-theme") === "dark" ? "dark" : "light";
+      const stored = window.localStorage.getItem("menucast-theme");
+      if (stored === "dark") {
+        setTheme("dark");
+        document.documentElement.dataset.theme = "dark";
+      }
     } catch {
-      return "light";
+      // localStorage not available, keep default "light"
     }
-  });
+  }, []);
 
   useEffect(() => {
+    if (!isHydrated) return;
     document.documentElement.dataset.theme = theme;
     try {
       window.localStorage.setItem("menucast-theme", theme);
     } catch {
       // Theme switching still works for the current session when storage is blocked.
     }
-  }, [theme]);
+  }, [theme, isHydrated]);
 
   const nextTheme = theme === "light" ? "dark" : "light";
 
