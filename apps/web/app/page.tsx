@@ -219,7 +219,7 @@ export default function HomePage() {
 
           {/* Primary CTA */}
           <Link
-            href="/pair"
+            href="/tv"
             className="w-full sm:w-auto min-h-12 px-6 inline-flex items-center justify-center gap-3 bg-[var(--button)] text-[var(--button-text)] rounded-full text-base font-semibold hover:-translate-y-0.5 hover:opacity-90 transition-all shadow-md mt-1 cursor-pointer"
           >
             Pair Your TV <ArrowIcon />

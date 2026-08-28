@@ -545,9 +545,8 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
                     {/* Status Pill Badge (Top Left) */}
                     <div className="absolute top-2 left-2 bg-[var(--surface)]/95 backdrop-blur-xs border border-[var(--accent-soft)] rounded-full px-2 py-0.5 flex items-center gap-1.5 shadow-xs z-10">
                       <div
-                        className={`size-1.5 rounded-full ${
-                          isOnline ? "bg-[#10b981] animate-pulse" : "bg-[#547a7c]"
-                        }`}
+                        className={`size-1.5 rounded-full ${isOnline ? "bg-[#10b981] animate-pulse" : "bg-[#547a7c]"
+                          }`}
                       />
                       <span className="text-[11px] font-normal text-[#304243] dark:text-[#a3b7b5] whitespace-nowrap">
                         {formatLastSeen(tv.last_seen_at, tv.paired_at, nowTime)}
@@ -735,7 +734,7 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
       {/* Screen Management Modal */}
       {currentModalTv && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-[var(--surface)] border border-[var(--accent-soft)] rounded-2xl max-w-xl w-full max-h-[90vh] flex flex-col shadow-2xl transition-colors duration-300 animate-in fade-in zoom-in-95 duration-150">
+          <div className="overflow-clip bg-[var(--surface)] border border-[var(--accent-soft)] rounded-2xl max-w-xl w-full max-h-[90vh] flex flex-col shadow-2xl transition-colors duration-300 animate-in fade-in zoom-in-95 duration-150">
             {/* Modal Header */}
             <div className="p-5 border-b border-[var(--line)] flex items-center justify-between">
               <div>
@@ -747,11 +746,10 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
                     </span>
                   </h2>
                   <span
-                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
-                      isModalTvOnline
-                        ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
-                        : "bg-neutral-500/10 text-neutral-500 border-neutral-500/20"
-                    }`}
+                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${isModalTvOnline
+                      ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                      : "bg-neutral-500/10 text-neutral-500 border-neutral-500/20"
+                      }`}
                   >
                     <span className={`size-1.5 rounded-full ${isModalTvOnline ? "bg-emerald-500 animate-pulse" : "bg-neutral-400"}`} />
                     {isModalTvOnline ? "Online" : "Offline"}
@@ -873,11 +871,10 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
                     }
                   }}
                   onClick={() => modalFileInputRef.current?.click()}
-                  className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2 ${
-                    dragOver
-                      ? "border-[var(--accent)] bg-[var(--surface-soft)]"
-                      : "border-[var(--accent-soft)] bg-[var(--surface-soft)] hover:border-[var(--accent)]"
-                  }`}
+                  className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2 ${dragOver
+                    ? "border-[var(--accent)] bg-[var(--surface-soft)]"
+                    : "border-[var(--accent-soft)] bg-[var(--surface-soft)] hover:border-[var(--accent)]"
+                    }`}
                 >
                   <input
                     ref={modalFileInputRef}
