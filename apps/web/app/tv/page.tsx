@@ -992,10 +992,7 @@ export default function TvPage() {
         {/* Top Header Controls */}
         <header className="w-full flex items-center justify-between px-6 py-4 z-20">
           <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#008996]/10 text-[#008996] border border-[#008996]/20">
-              <span className="size-2 rounded-full bg-[#008996] animate-pulse" />
-              miniKast Display
-            </span>
+            <img src="/menucast-logo.svg" alt="miniKast logo" className="h-6 w-auto" />
           </div>
 
           <div className="flex items-center gap-2 text-xs text-[#547a7c]">
@@ -1023,7 +1020,7 @@ export default function TvPage() {
             <div className="flex flex-col items-center">
               <div className="relative">
                 {/* Perched Mascot tilted at 33.52deg on top-left of QR frame */}
-                <div className="absolute -top-11 -left-3.5 z-20 pointer-events-none rotate-[33.52deg]">
+                <div className="-mb-[10px] z-20 pointer-events-none">
                   <img
                     src="/logo-minikast.svg"
                     alt="miniKast mascot"

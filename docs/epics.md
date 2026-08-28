@@ -74,6 +74,11 @@
 #### STORY-3.3: Native Kotlin Android TV / Fire TV Kiosk Container
 - [x] **Given** a Fire TV / Android TV device booting up, **When** `ACTION_BOOT_COMPLETED` is received, **Then** `BootReceiver` starts `MainActivity` automatically with `FLAG_KEEP_SCREEN_ON` and auto-reconnect watchdog.
 
+#### STORY-3.4: PWA Install App Popup & Download Modal Redesign (`node-id=1470:9050`)
+- [x] **Given** an uninstalled visitor or dashboard user on supported browsers, **When** the install prompt is triggered, **Then** it displays the floating card matching Figma node `1470:9050` with bird mascot icon, "Install miniKast App" / "Launch directly from your device." copy, and `#008996` pill button.
+- [x] **Given** a user clicking "Install", **When** on Chromium/Android/Desktop, **Then** the native browser PWA installation handshake executes smoothly.
+- [x] **Given** a user clicking "Install App" in dashboard/tv headers or on iOS Safari, **When** native PWA prompt is unsupported, **Then** an updated branded modal instructions sheet is displayed.
+
 ---
 
 ## 🚀 P1: Commercial MVP — Active Backlog

@@ -53,10 +53,11 @@
 | `STORY-5.2` | Password Reset & Profile Account Management | 3 pts | P1 | ⚪ To Do | `STORY-5.1` |
 | [`STORY-5.3`](file:///Users/battosai/Dev/menucast/docs/stories/story-5.3.md) | Dashboard Displays & Screen Management UI Redesign (`1468:7181`) | 5 pts | P1 | 🟢 **DONE** | `STORY-5.1` |
 | [`STORY-1.3`](file:///Users/battosai/Dev/menucast/docs/stories/story-1.3.md) | TV Display Pairing Screen UI Redesign (`1459:10382`) | 3 pts | P1 | 🟢 **DONE** | None |
+| [`STORY-3.4`](file:///Users/battosai/Dev/menucast/docs/stories/story-3.4.md) | PWA Install App Popup & Download Modal Redesign (`1470:9050`) | 2 pts | P1 | 🟢 **DONE** | None |
 
 *(Note: Social OAuth Login is deferred to Post-MVP in [`docs/ideas.md`](file:///Users/battosai/Dev/menucast/docs/ideas.md)).*
 
-**Sprint 2 Summary**: 7 Stories | **27 Story Points Total** | **13 / 27 pts Completed (48%)** | 4 To Do.
+**Sprint 2 Summary**: 8 Stories | **29 Story Points Total** | **15 / 29 pts Completed (52%)** | 4 To Do.
 
 ---
 

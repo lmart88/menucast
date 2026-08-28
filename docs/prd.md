@@ -113,10 +113,17 @@ The POC establishes the end-to-end technical pipeline from Figma directly to phy
 - 1-click canvas frame generator creating artboards matching the TV's exact aspect ratio and dimensions.
 - 1-click 2x PNG export and push with instantaneous success banner.
 
-#### FR-0.4 Progressive Web App (PWA)
+#### FR-0.4 Progressive Web App (PWA) & Install Experience
 - Fullscreen display client with manifest and Service Worker caching.
 - Double-buffered image preloading to eliminate frame tearing.
 - `localStorage` device state persistence for instant recovery after power outages.
+- **Install PopUp & Download Experience (`node-id=1470:9050`)**:
+  - Floating card (`bg-[#f7fcfc]`, `border 1px solid #b7eaed`, `16px` border-radius).
+  - miniKast bird mascot app icon (`48px` x `48px`).
+  - Clear value proposition: "Install miniKast App" / "Launch directly from your device."
+  - High-contrast teal `#008996` pill action button with download icon.
+  - Guided iOS Safari "Add to Home Screen" visual walkthrough.
+  - Specification Reference: [`docs/spec-install-app-popup.md`](file:///Users/battosai/Dev/menucast/docs/spec-install-app-popup.md)
 
 #### FR-0.5 Native Android TV & Fire TV Kiosk Container
 - Dedicated Kotlin app (`apps/tv-android`) launching on device boot (`RECEIVE_BOOT_COMPLETED`).

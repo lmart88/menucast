@@ -196,15 +196,16 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
   }, []);
 
   async function handleInstallApp() {
-    if (!installPrompt) {
-      alert("To install miniKast, use your browser menu ('Install miniKast' or 'Add to Home Screen').");
+    if (installPrompt) {
+      installPrompt.prompt();
+      const { outcome } = await installPrompt.userChoice;
+      if (outcome === "accepted") {
+        setInstallPrompt(null);
+      }
       return;
     }
-    installPrompt.prompt();
-    const { outcome } = await installPrompt.userChoice;
-    if (outcome === "accepted") {
-      setInstallPrompt(null);
-    }
+    // Dispatch global custom event for PwaInstallPrompt component to display branded instructions modal
+    window.dispatchEvent(new CustomEvent("minikast:trigger-install"));
   }
 
   async function generateToken() {
