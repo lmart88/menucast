@@ -85,7 +85,6 @@ export default function HomePage() {
   const nextTheme = theme === "light" ? "dark" : "light";
 
   return <main className="home-shell">
-    <div className="home-noise" aria-hidden="true" />
     <header className="home-header">
       <Link href="/" className="wordmark" aria-label="MenuCast home"><ThemeAwareLogo theme={theme} /></Link>
       <nav className="header-actions" aria-label="Main navigation">
@@ -116,6 +115,8 @@ export default function HomePage() {
       <div className="platform-list">{platforms.map((platform) => <span key={platform.name} className={`platform-item ${platform.className}`}><img src={platform.src} alt={platform.name} /></span>)}</div>
     </section>
 
-    <footer className="home-footer"><span>© 2026 MenuCast. All rights reserved.</span><span>Contact: <a href="mailto:hello@menucast.com">hello@menucast.com</a></span></footer>
+    <div className="footer-container">
+      <footer className="home-footer"><span>© 2026 MenuCast. All rights reserved.</span><span>Contact: <a href="mailto:hello@menucast.com">hello@menucast.com</a></span></footer>
+    </div>
   </main>;
 }
