@@ -98,6 +98,12 @@
 - [ ] **Given** an existing user, **When** requesting password reset at `/forgot-password`, **Then** a secure one-time reset link is dispatched, allowing the user to reset their credentials securely.
 - [ ] **Given** an authenticated user on `/dashboard/settings` or account modal, **When** updating their profile, **Then** name/email/password changes are persisted securely.
 
+#### STORY-5.3: Dashboard Displays & Screen Management UI Redesign (`node-id=1468:7181`)
+- [x] **Given** an authenticated user on `/dashboard`, **When** the page loads, **Then** it renders the updated design matching Figma node `1468:7181` with brand header (miniKast logo, Install App, Account, Sign Out, theme switch), light mint radial backdrop with dot pattern, and brand footer.
+- [x] **Given** a user with paired screens, **When** viewing the "Displays" section, **Then** screen cards are rendered with live thumbnail/placeholder, top-left status pill badge, screen title, delete icon button, and hardware specifications (`resolution`, `aspect ratio`, `orientation`).
+- [x] **Given** a user clicking "Pair New Screen", **When** clicked, **Then** the user is directed to the screen pairing workflow (`/pair`).
+- [x] **Given** a user clicking the delete icon on a screen card, **When** confirmed, **Then** `DELETE /api/tv/delete` executes and removes the screen from Postgres and realtime subscriptions.
+
 *(Note: Social OAuth Login is deferred to [`docs/ideas.md`](file:///Users/battosai/Dev/menucast/docs/ideas.md)).*
 
 ---

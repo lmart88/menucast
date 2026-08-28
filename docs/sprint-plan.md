@@ -51,10 +51,11 @@
 | `STORY-4.3` | Pricing Tiers & FAQ Section | 3 pts | P1 | ⚪ To Do | `STORY-4.2` |
 | [`STORY-5.1`](file:///Users/battosai/Dev/menucast/docs/stories/story-5.1.md) | Self-Serve Registration, Login & Forgot Password (Redesigned UI) | 5 pts | P1 | 🟢 **DONE** | None |
 | `STORY-5.2` | Password Reset & Profile Account Management | 3 pts | P1 | ⚪ To Do | `STORY-5.1` |
+| [`STORY-5.3`](file:///Users/battosai/Dev/menucast/docs/stories/story-5.3.md) | Dashboard Displays & Screen Management UI Redesign (`1468:7181`) | 5 pts | P1 | 🟢 **DONE** | `STORY-5.1` |
 
 *(Note: Social OAuth Login is deferred to Post-MVP in [`docs/ideas.md`](file:///Users/battosai/Dev/menucast/docs/ideas.md)).*
 
-**Sprint 2 Summary**: 5 Stories | **19 Story Points Total** | **5 / 19 pts Completed (26%)** | 4 To Do.
+**Sprint 2 Summary**: 6 Stories | **24 Story Points Total** | **10 / 24 pts Completed (42%)** | 4 To Do.
 
 ---
 

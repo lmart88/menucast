@@ -3,11 +3,43 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { signOut } from "next-auth/react";
 import Link from "next/link";
-import { createClient } from "@supabase/supabase-js";
+
 import type { Database } from "@menucast/supabase";
 
+export type Theme = "light" | "dark";
+
+function SunIcon() {
+  return <img aria-hidden="true" src="/theme-sun.svg" alt="" className="w-5 h-5 block" />;
+}
+
+function MoonIcon() {
+  return <img aria-hidden="true" src="/theme-moon.svg" alt="" className="w-5 h-5 block" />;
+}
+
+function ThemeAwareLogo({ theme }: { theme: Theme }) {
+  const [logoSource, setLogoSource] = useState("");
+
+  useEffect(() => {
+    fetch("/menucast-logo.svg")
+      .then((response) => response.text())
+      .then(setLogoSource)
+      .catch(() => setLogoSource(""));
+  }, []);
+
+  const unionFill = theme === "dark" ? "#fff" : "#0d1f21";
+  const logoMarkup = logoSource.replace(/(<path id="Union"[^>]*fill=")[^"]+/, `$1${unionFill}`);
+
+  return (
+    <span
+      className="block w-[95px] max-w-full h-5 [&_svg]:block [&_svg]:w-[95px] [&_svg]:max-w-full [&_svg]:h-5"
+      aria-hidden="true"
+      dangerouslySetInnerHTML={{ __html: logoMarkup }}
+    />
+  );
+}
+
 type TV = Database["public"]["Tables"]["tvs"]["Row"] & {
-  menus: Database["public"]["Tables"]["menus"]["Row"][];
+  menus?: Database["public"]["Tables"]["menus"]["Row"][];
 };
 
 function isScreenOnline(lastSeenAt?: string | null, pairedAt?: string | null, nowTime = Date.now()): boolean {
@@ -17,7 +49,6 @@ function isScreenOnline(lastSeenAt?: string | null, pairedAt?: string | null, no
       return true;
     }
   }
-  // Freshly paired screen within last 60 seconds is immediately online
   if (pairedAt) {
     const paired = new Date(pairedAt).getTime();
     if (!isNaN(paired) && nowTime - paired < 60000) {
@@ -37,31 +68,27 @@ function formatLastSeen(lastSeenAt?: string | null, pairedAt?: string | null, no
   if (diffSec < 90) return "1 min ago";
   if (diffSec < 3600) return `${Math.floor(diffSec / 60)} mins ago`;
   if (diffSec < 86400) return `${Math.floor(diffSec / 3600)} hours ago`;
-  return `${Math.floor(diffSec / 86400)} days ago`;
+  const days = Math.floor(diffSec / 86400);
+  return `${days} ${days === 1 ? "day" : "days"} ago`;
 }
 
-function formatScreenSpecs(tv?: {
-  screen_width?: number | null;
-  screen_height?: number | null;
-  aspect_ratio?: string | null;
-  orientation?: string | null;
-} | null): string {
-  if (!tv) return "16:9 1920x1080 Landscape";
+function getScreenSpecs(tv?: TV | null) {
+  if (!tv) {
+    return {
+      resolution: "1920x1080",
+      ratio: "16:9",
+      orientation: "Landscape",
+    };
+  }
   const width = tv.screen_width || 1920;
   const height = tv.screen_height || 1080;
   const ratio = tv.aspect_ratio || (width >= height ? "16:9" : "9:16");
   const orientation = tv.orientation || (width >= height ? "Landscape" : "Portrait");
-
-  return `${ratio} ${width}x${height} ${orientation}`;
-}
-
-interface HybridElement {
-  id: string;
-  name: string;
-  text: string;
-  isPrice?: boolean;
-  fontSize?: number;
-  color?: string;
+  return {
+    resolution: `${width}x${height}`,
+    ratio,
+    orientation,
+  };
 }
 
 interface Props {
@@ -73,14 +100,60 @@ interface Props {
 export default function DashboardClient({ initialTvs, hasToken, userName }: Props) {
   const [tvs, setTvs] = useState<TV[]>(initialTvs);
   const [nowTime, setNowTime] = useState(Date.now());
+  const [theme, setTheme] = useState<Theme>("light");
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  // Auth / Account & Token Modal
+  const [showAccountModal, setShowAccountModal] = useState(false);
   const [token, setToken] = useState<string | null>(null);
   const [tokenLoading, setTokenLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  // Deletion state
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  // PWA install prompt
   const [installPrompt, setInstallPrompt] = useState<any>(null);
 
-  // Periodic timer to keep presence status and elapsed timestamps accurate
+  // Screen Detail & Upload Modal
+  const [activeScreen, setActiveScreen] = useState<TV | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgressText, setUploadProgressText] = useState("");
+  const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [isClearingImage, setIsClearingImage] = useState(false);
+  const [confirmClearImage, setConfirmClearImage] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+
+  const modalFileInputRef = useRef<HTMLInputElement | null>(null);
+  const cardFileInputRef = useRef<HTMLInputElement | null>(null);
+  const [targetUploadTvId, setTargetUploadTvId] = useState<string | null>(null);
+
+  // Theme synchronization
+  useEffect(() => {
+    setIsHydrated(true);
+    try {
+      const stored = window.localStorage.getItem("menucast-theme");
+      if (stored === "dark") {
+        setTheme("dark");
+        document.documentElement.dataset.theme = "dark";
+      }
+    } catch {
+      // localStorage not accessible
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isHydrated) return;
+    document.documentElement.dataset.theme = theme;
+    try {
+      window.localStorage.setItem("menucast-theme", theme);
+    } catch {
+      // Ignore
+    }
+  }, [theme, isHydrated]);
+
+  // Periodic heartbeat timer
   useEffect(() => {
     const timer = setInterval(() => {
       setNowTime(Date.now());
@@ -88,12 +161,12 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
     return () => clearInterval(timer);
   }, []);
 
-  // Poll / refresh TV presence periodically
+  // Poll TV presence
   const fetchTvs = useCallback(async () => {
     try {
       const res = await fetch(`/api/tv/list?_t=${Date.now()}`, {
         cache: "no-store",
-        headers: { "Pragma": "no-cache" },
+        headers: { Pragma: "no-cache" },
       });
       if (res.ok) {
         const data = await res.json();
@@ -102,7 +175,7 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
         }
       }
     } catch {
-      // Background poll failure handled silently
+      // Silently fail on poll error
     }
   }, []);
 
@@ -112,19 +185,21 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
     return () => clearInterval(pollInterval);
   }, [fetchTvs]);
 
-  // Listen for PWA install prompt
+  // Listen for beforeinstallprompt
   useEffect(() => {
     const handleBeforeInstall = (e: Event) => {
       e.preventDefault();
       setInstallPrompt(e);
     };
-
     window.addEventListener("beforeinstallprompt", handleBeforeInstall);
     return () => window.removeEventListener("beforeinstallprompt", handleBeforeInstall);
   }, []);
 
   async function handleInstallApp() {
-    if (!installPrompt) return;
+    if (!installPrompt) {
+      alert("To install miniKast, use your browser menu ('Install miniKast' or 'Add to Home Screen').");
+      return;
+    }
     installPrompt.prompt();
     const { outcome } = await installPrompt.userChoice;
     if (outcome === "accepted") {
@@ -132,32 +207,17 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
     }
   }
 
-  // Screen Detail & Image Management Modal
-  const [activeScreen, setActiveScreen] = useState<TV | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgressText, setUploadProgressText] = useState("");
-  const [uploadSuccess, setUploadSuccess] = useState(false);
-  const [isClearingImage, setIsClearingImage] = useState(false);
-  const [confirmClearImage, setConfirmClearImage] = useState(false);
-  const [dragOver, setDragOver] = useState(false);
-
-  // Hidden file input refs
-  const modalFileInputRef = useRef<HTMLInputElement | null>(null);
-  const cardFileInputRef = useRef<HTMLInputElement | null>(null);
-  const [targetUploadTvId, setTargetUploadTvId] = useState<string | null>(null);
-
-  // Live Editor State (for hybrid text editing if applicable)
-  const [editingTv, setEditingTv] = useState<TV | null>(null);
-  const [editingData, setEditingData] = useState<any>(null);
-  const [savingTv, setSavingTv] = useState(false);
-  const [saveSuccess, setSaveSuccess] = useState(false);
-
   async function generateToken() {
     setTokenLoading(true);
-    const res = await fetch("/api/token", { method: "POST" });
-    const data = await res.json();
-    setToken(data.token);
-    setTokenLoading(false);
+    try {
+      const res = await fetch("/api/token", { method: "POST" });
+      const data = await res.json();
+      setToken(data.token);
+    } catch {
+      alert("Failed to generate token");
+    } finally {
+      setTokenLoading(false);
+    }
   }
 
   async function copyToken() {
@@ -180,19 +240,17 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
         setTvs((prev) => prev.filter((tv) => tv.id !== tvId));
         setConfirmDeleteId(null);
         if (activeScreen?.id === tvId) setActiveScreen(null);
-        if (editingTv?.id === tvId) setEditingTv(null);
       } else {
         const err = await res.json().catch(() => ({}));
-        alert(`Failed to delete TV: ${err.error || "Unknown error"}`);
+        alert(`Failed to delete screen: ${err.error || "Unknown error"}`);
       }
     } catch {
-      alert("Error deleting TV. Please try again.");
+      alert("Error deleting screen. Please try again.");
     } finally {
       setDeletingId(null);
     }
   }
 
-  // Upload and push new image to TV
   async function handleImageUpload(tvId: string, file: File) {
     if (!file || !tvId) return;
 
@@ -206,7 +264,6 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
     setUploadSuccess(false);
 
     try {
-      // 1. Get signed upload URL
       const uploadRes = await fetch("/api/menu/upload", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -224,7 +281,6 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
 
       const { upload_url, public_url } = await uploadRes.json();
 
-      // 2. Upload file to Supabase storage
       setUploadProgressText("Uploading image file…");
       const fileBytes = await file.arrayBuffer();
       const storagePutRes = await fetch(upload_url, {
@@ -237,7 +293,6 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
         throw new Error(`Storage upload failed (HTTP ${storagePutRes.status})`);
       }
 
-      // 3. Push new menu to TV
       setUploadProgressText("Broadcasting to TV screen…");
       const pushRes = await fetch("/api/menu/push", {
         method: "POST",
@@ -255,7 +310,6 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
         throw new Error(err.error || `Push broadcast failed (HTTP ${pushRes.status})`);
       }
 
-      // Update local state
       setTvs((prev) =>
         prev.map((t) =>
           t.id === tvId
@@ -286,7 +340,6 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
     }
   }
 
-  // Delete / Clear active image from screen
   async function handleClearImage(tvId: string) {
     if (!tvId) return;
 
@@ -303,7 +356,6 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
         throw new Error(err.error || `Failed to clear screen image (HTTP ${res.status})`);
       }
 
-      // Update local state
       setTvs((prev) =>
         prev.map((t) =>
           t.id === tvId
@@ -329,64 +381,16 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
     }
   }
 
-  function openScreenDetails(tv: TV) {
-    setActiveScreen(tv);
-    setConfirmClearImage(false);
-    setUploadSuccess(false);
-  }
-
-  function openEditor(tv: TV) {
-    setEditingTv(tv);
-    setSaveSuccess(false);
-    setEditingData(tv.menu_data ? JSON.parse(JSON.stringify(tv.menu_data)) : null);
-  }
-
-  function handleHybridTextChange(id: string, newText: string) {
-    if (!editingData?.elements) return;
-    const updatedElements = editingData.elements.map((el: HybridElement) =>
-      el.id === id ? { ...el, text: newText } : el
-    );
-    setEditingData({ ...editingData, elements: updatedElements });
-  }
-
-  async function saveAndPushLive() {
-    if (!editingTv || !editingData) return;
-    setSavingTv(true);
-    setSaveSuccess(false);
-
-    try {
-      const res = await fetch("/api/menu/update-data", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          tv_id: editingTv.id,
-          menu_data: editingData,
-        }),
-      });
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || "Failed to update menu data");
-      }
-
-      setTvs((prev) =>
-        prev.map((t) => (t.id === editingTv.id ? { ...t, menu_data: editingData } : t))
-      );
-
-      setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 3000);
-    } catch (err: any) {
-      alert(`Save error: ${err.message}`);
-    } finally {
-      setSavingTv(false);
-    }
-  }
-
-  const currentModalTv = activeScreen ? (tvs.find((t) => t.id === activeScreen.id) || activeScreen) : null;
-  const isModalTvOnline = currentModalTv ? isScreenOnline(currentModalTv.last_seen_at, currentModalTv.paired_at, nowTime) : false;
+  const nextTheme = theme === "light" ? "dark" : "light";
+  const currentModalTv = activeScreen ? tvs.find((t) => t.id === activeScreen.id) || activeScreen : null;
+  const isModalTvOnline = currentModalTv
+    ? isScreenOnline(currentModalTv.last_seen_at, currentModalTv.paired_at, nowTime)
+    : false;
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-white">
+    <main className="home-shell min-h-screen flex flex-col justify-between overflow-x-hidden relative bg-[var(--background)] text-[var(--foreground)] transition-colors duration-300">
+      <div className="home-noise" aria-hidden="true" />
+
       {/* Hidden Card File Input */}
       <input
         ref={cardFileInputRef}
@@ -401,184 +405,220 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
         }}
       />
 
-      {/* Nav */}
-      <nav className="flex items-center justify-between px-6 py-4 border-b border-white/5">
-        <Link href="/" className="text-base font-semibold tracking-tight flex items-center gap-2">
-          <span className="text-xl">📺</span>
-          <span>miniKast</span>
-        </Link>
-        <div className="flex items-center gap-3">
-          {installPrompt && (
+      {/* Header */}
+      <header className="w-full bg-[var(--surface)] border-b border-[var(--accent-soft)] transition-colors duration-300 z-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-8 py-3.5 sm:py-4 flex items-center justify-between">
+          {/* Logo Left */}
+          <Link href="/" className="flex items-center gap-2" aria-label="miniKast home">
+            <ThemeAwareLogo theme={theme} />
+          </Link>
+
+          {/* Right Actions */}
+          <div className="flex items-center gap-3 sm:gap-4">
+            {/* Install App Button */}
             <button
               onClick={handleInstallApp}
-              className="flex items-center gap-1.5 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 px-3 py-1.5 rounded-lg text-xs font-semibold tracking-wide transition-colors cursor-pointer"
+              type="button"
+              className="flex items-center gap-1.5 border border-[var(--accent-soft)] rounded-full px-3 sm:px-3.5 py-1 text-xs font-semibold text-[var(--foreground)] hover:bg-[var(--surface-soft)] transition-colors cursor-pointer"
             >
-              <svg className="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <svg className="size-3.5 text-[var(--accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
               </svg>
               <span>Install App</span>
             </button>
-          )}
-          <span className="text-sm text-neutral-500">{userName}</span>
-          <button
-            onClick={() => signOut({ callbackUrl: "/" })}
-            className="text-sm text-neutral-500 hover:text-white transition-colors cursor-pointer"
-          >
-            Sign out
-          </button>
-        </div>
-      </nav>
 
-      <div className="max-w-5xl mx-auto px-6 py-10 space-y-10">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold">Your Displays</h1>
-            <p className="text-sm text-neutral-400 mt-1">
-              Manage connected TV screens, upload new menu images, or clear active displays.
-            </p>
+            {/* Links */}
+            <div className="flex items-center gap-3 sm:gap-4 text-xs sm:text-sm font-normal">
+              <button
+                type="button"
+                onClick={() => setShowAccountModal(true)}
+                className="text-[var(--foreground)] hover:text-[var(--accent)] transition-colors cursor-pointer"
+              >
+                Account
+              </button>
+              <button
+                type="button"
+                onClick={() => signOut({ callbackUrl: "/login" })}
+                className="text-[var(--foreground)] hover:text-[var(--accent)] transition-colors cursor-pointer"
+              >
+                Sign Out
+              </button>
+            </div>
+
+            {/* Separator */}
+            <div className="h-4 w-px bg-[var(--line)]" aria-hidden="true" />
+
+            {/* Theme Toggle */}
+            <button
+              className="p-1.5 text-[var(--foreground)] bg-transparent rounded-lg hover:bg-[var(--surface-soft)] transition-colors flex items-center justify-center cursor-pointer"
+              type="button"
+              aria-label={`Switch to ${nextTheme} theme`}
+              onClick={() => setTheme(nextTheme)}
+            >
+              {theme === "light" ? <MoonIcon /> : <SunIcon />}
+            </button>
           </div>
+        </div>
+      </header>
+
+      {/* Main Body */}
+      <section className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-8 py-8 sm:py-12 z-10 space-y-6">
+        {/* Page Title Row */}
+        <div className="flex items-center justify-between gap-4">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[var(--foreground)]">
+            Displays
+          </h1>
+
           <Link
-            href="/tv"
-            target="_blank"
-            className="flex items-center gap-2 bg-white text-neutral-950 px-4 py-2 rounded-lg text-sm font-medium hover:bg-neutral-200 transition-colors shadow-sm"
+            href="/pair"
+            className="bg-[#f27200] hover:bg-[#ff8000] text-white px-4 sm:px-5 py-2 rounded-full text-xs sm:text-sm font-bold shadow-xs hover:shadow transition-all hover:scale-[1.02] active:scale-[0.99] flex items-center gap-1.5 cursor-pointer"
           >
-            + Pair New TV
+            <span>Pair New Screen</span>
           </Link>
         </div>
 
-        {/* TV list */}
+        {/* Displays Grid / List */}
         {tvs.length === 0 ? (
-          <div className="border border-white/10 border-dashed rounded-2xl p-12 flex flex-col items-center gap-4 text-center">
-            <span className="text-4xl">📺</span>
-            <h2 className="text-lg font-medium">No TVs paired yet</h2>
-            <p className="text-sm text-neutral-500 max-w-xs">
-              Open miniKast on your restaurant TV and scan the QR code to pair it.
-            </p>
-            <Link
-              href="/tv"
-              target="_blank"
-              className="mt-2 bg-white text-neutral-950 px-4 py-2 rounded-lg text-sm font-medium hover:bg-neutral-200 transition-colors"
-            >
-              Open TV pairing page →
-            </Link>
+          <div className="w-full bg-[var(--surface)] border border-[var(--accent-soft)] rounded-2xl p-10 sm:p-16 flex flex-col items-center justify-center text-center space-y-4 shadow-xs transition-colors duration-300">
+            <div className="size-16 rounded-full bg-[var(--surface-soft)] border border-[var(--accent-soft)] flex items-center justify-center text-2xl text-[var(--accent)]">
+              📺
+            </div>
+            <div className="space-y-1 max-w-md">
+              <h2 className="text-lg font-bold text-[var(--foreground)]">No screens paired yet</h2>
+              <p className="text-sm text-[var(--muted)]">
+                Launch the miniKast player on your TV display or browser to generate a pairing code.
+              </p>
+            </div>
+            <div className="flex items-center gap-3 pt-2">
+              <Link
+                href="/pair"
+                className="bg-[#f27200] hover:bg-[#ff8000] text-white px-5 py-2 rounded-full text-sm font-bold shadow-xs hover:shadow transition-all cursor-pointer"
+              >
+                Pair Screen Code
+              </Link>
+              <Link
+                href="/tv"
+                target="_blank"
+                className="border border-[var(--accent-soft)] text-[var(--foreground)] hover:bg-[var(--surface-soft)] px-5 py-2 rounded-full text-sm font-semibold transition-colors cursor-pointer"
+              >
+                Launch TV Player ↗
+              </Link>
+            </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {tvs.map((tv) => {
               const lastMenu = tv.menus?.[0];
               const isDeleting = deletingId === tv.id;
               const isConfirming = confirmDeleteId === tv.id;
-              const mode = tv.menu_mode || lastMenu?.menu_mode || "static";
               const hasActiveImage = Boolean(tv.current_menu_url || lastMenu?.image_url);
               const currentImgUrl = tv.current_menu_url || lastMenu?.image_url || "";
-              const menuDataObj = tv.menu_data as any;
-              const hasEditableData =
-                mode === "hybrid" && Array.isArray(menuDataObj?.elements) && menuDataObj.elements.length > 0;
               const isOnline = isScreenOnline(tv.last_seen_at, tv.paired_at, nowTime);
+              const specs = getScreenSpecs(tv);
 
               return (
                 <div
                   key={tv.id}
-                  className="group bg-white/5 border border-white/10 rounded-2xl overflow-hidden hover:border-white/20 transition-all flex flex-col justify-between"
+                  className="bg-[var(--surface)] border border-[var(--accent-soft)] rounded-lg overflow-hidden shadow-[0_1px_4px_rgba(12,12,13,0.05)] hover:shadow-md transition-all flex flex-col justify-between group"
                 >
-                  {/* Thumbnail & Click to Open Screen */}
+                  {/* Top: Image Preview Area */}
                   <div
-                    onClick={() => openScreenDetails(tv)}
-                    className="aspect-video bg-neutral-900 flex items-center justify-center overflow-hidden relative cursor-pointer group-hover:opacity-95 transition-opacity"
+                    onClick={() => {
+                      setActiveScreen(tv);
+                      setConfirmClearImage(false);
+                      setUploadSuccess(false);
+                    }}
+                    className="relative w-full h-[182px] bg-[#f7fcfc] dark:bg-[#081517] border-b border-[var(--accent-soft)] flex items-center justify-center overflow-hidden cursor-pointer"
                   >
                     {hasActiveImage ? (
                       <img
                         src={currentImgUrl}
                         alt={tv.name}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover group-hover:scale-[1.01] transition-transform duration-300"
                       />
                     ) : (
-                      <div className="text-center p-4">
-                        <span className="text-3xl block mb-1">🖼️</span>
-                        <span className="text-neutral-500 text-xs font-medium">No menu image loaded</span>
-                        <span className="block text-[11px] text-emerald-400 mt-1 font-semibold">
-                          Click to upload image &rarr;
-                        </span>
-                      </div>
+                      <p className="text-sm font-normal text-[#547a7c] dark:text-[#a3b7b5]">
+                        Awaiting menu
+                      </p>
                     )}
 
-                    {/* Code Tag Top Right */}
-                    <div className="absolute top-2 right-2 flex items-center gap-1.5">
-                      <span className="bg-black/75 backdrop-blur-md text-[11px] px-2.5 py-1 rounded-full text-emerald-400 border border-emerald-500/20 font-mono font-bold">
-                        {tv.pairing_code}
+                    {/* Status Pill Badge (Top Left) */}
+                    <div className="absolute top-2 left-2 bg-[var(--surface)]/95 backdrop-blur-xs border border-[var(--accent-soft)] rounded-full px-2 py-0.5 flex items-center gap-1.5 shadow-xs z-10">
+                      <div
+                        className={`size-1.5 rounded-full ${
+                          isOnline ? "bg-[#10b981] animate-pulse" : "bg-[#547a7c]"
+                        }`}
+                      />
+                      <span className="text-[11px] font-normal text-[#304243] dark:text-[#a3b7b5] whitespace-nowrap">
+                        {formatLastSeen(tv.last_seen_at, tv.paired_at, nowTime)}
                       </span>
                     </div>
 
-                    {/* Overlay hover prompt */}
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
-                      <span className="bg-neutral-900/90 text-white border border-white/20 px-3.5 py-1.5 rounded-full text-xs font-medium backdrop-blur-md shadow-lg">
-                        Manage Screen &bull; Upload / Delete Image
+                    {/* Pairing Code Badge (Top Right) */}
+                    <div className="absolute top-2 right-2 bg-[var(--surface)]/95 backdrop-blur-xs border border-[var(--accent-soft)] rounded-full px-2 py-0.5 text-[10px] font-mono font-bold text-[var(--foreground)] shadow-xs z-10">
+                      {tv.pairing_code}
+                    </div>
+
+                    {/* Hover Prompt Overlay */}
+                    <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+                      <span className="bg-[var(--surface)] text-[var(--foreground)] border border-[var(--accent-soft)] px-3 py-1 rounded-full text-xs font-semibold shadow-md">
+                        Manage Display
                       </span>
                     </div>
                   </div>
 
-                  {/* Info & Actions */}
-                  <div className="p-4 space-y-3">
+                  {/* Bottom: Info & Controls */}
+                  <div className="p-4 flex flex-col gap-3 bg-[var(--surface)]">
                     <div className="flex items-center justify-between gap-2">
-                      <div className="space-y-0.5 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h3 className="font-semibold text-sm text-white truncate">
-                            {tv.name}
-                          </h3>
-                          {isOnline ? (
-                            <span
-                              className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                              title={`Online (Heartbeat ${formatLastSeen(tv.last_seen_at, tv.paired_at, nowTime)})`}
-                            >
-                              <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                              Online
-                            </span>
-                          ) : (
-                            <span
-                              className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium bg-neutral-800 text-neutral-400 border border-neutral-700"
-                              title={`Offline (${formatLastSeen(tv.last_seen_at, tv.paired_at, nowTime)})`}
-                            >
-                              <span className="size-1.5 rounded-full bg-neutral-500" />
-                              Offline
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-xs text-neutral-500 flex items-center gap-1.5 flex-wrap">
-                          <span>{formatScreenSpecs(tv)}</span>
-                          <span className="text-neutral-600">&bull;</span>
-                          <span className={isOnline ? "text-emerald-400/80 font-medium" : "text-neutral-500"}>
-                            {formatLastSeen(tv.last_seen_at, tv.paired_at, nowTime)}
-                          </span>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="font-bold text-base text-[#0d1f21] dark:text-[#f4f8f7] truncate">
+                          {tv.name}
+                        </h3>
+                        <p className="text-xs text-[#547a7c] dark:text-[#a3b7b5] flex items-center gap-2 font-normal mt-0.5">
+                          <span>{specs.resolution}</span>
+                          <span>{specs.ratio}</span>
+                          <span>{specs.orientation}</span>
                         </p>
                       </div>
 
-                      {/* Unpair / Delete TV */}
+                      {/* Delete Icon Button (delete-02) */}
                       <div className="shrink-0">
                         {isConfirming ? (
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-1">
                             <button
-                              onClick={() => deleteTv(tv.id)}
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                deleteTv(tv.id);
+                              }}
                               disabled={isDeleting}
-                              className="bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 px-2.5 py-1 rounded-md text-xs font-medium transition-colors disabled:opacity-50 cursor-pointer"
+                              className="bg-red-500 hover:bg-red-600 text-white text-[11px] font-bold px-2 py-1 rounded transition-colors disabled:opacity-50 cursor-pointer"
                             >
-                              {isDeleting ? "Deleting…" : "Confirm"}
+                              {isDeleting ? "…" : "Delete"}
                             </button>
                             <button
-                              onClick={() => setConfirmDeleteId(null)}
-                              disabled={isDeleting}
-                              className="text-neutral-400 hover:text-white px-2 py-1 text-xs cursor-pointer"
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setConfirmDeleteId(null);
+                              }}
+                              className="text-[11px] text-[var(--muted)] hover:text-[var(--foreground)] px-1.5 py-1 cursor-pointer"
                             >
                               Cancel
                             </button>
                           </div>
                         ) : (
                           <button
-                            onClick={() => setConfirmDeleteId(tv.id)}
-                            className="text-neutral-500 hover:text-red-400 p-1.5 rounded-lg hover:bg-red-500/10 transition-colors cursor-pointer"
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setConfirmDeleteId(tv.id);
+                            }}
+                            className="text-[#547a7c] hover:text-red-500 p-1.5 rounded hover:bg-red-500/10 transition-colors cursor-pointer"
                             title="Unpair & Delete Screen"
+                            aria-label="Delete screen"
                           >
-                            <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
                               <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                             </svg>
                           </button>
@@ -586,35 +626,31 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
                       </div>
                     </div>
 
-                    {/* Action Toolbar */}
-                    <div className="pt-2 border-t border-white/5 flex items-center gap-2">
+                    {/* Action Bar */}
+                    <div className="pt-2 border-t border-[var(--line)] flex items-center gap-2">
                       <button
-                        onClick={() => openScreenDetails(tv)}
-                        className="flex-1 flex items-center justify-center gap-1.5 bg-white/10 hover:bg-white/15 border border-white/10 text-white py-2 rounded-xl text-xs font-semibold tracking-wide transition-colors cursor-pointer"
+                        type="button"
+                        onClick={() => {
+                          setActiveScreen(tv);
+                          setConfirmClearImage(false);
+                          setUploadSuccess(false);
+                        }}
+                        className="flex-1 py-1.5 text-xs font-semibold rounded-md border border-[var(--accent-soft)] hover:bg-[var(--surface-soft)] text-[var(--foreground)] transition-colors cursor-pointer text-center"
                       >
-                        <span>⚙️ Manage Screen</span>
+                        Manage
                       </button>
 
                       <button
+                        type="button"
                         onClick={() => {
                           setTargetUploadTvId(tv.id);
                           cardFileInputRef.current?.click();
                         }}
                         disabled={isUploading}
-                        className="flex-1 flex items-center justify-center gap-1.5 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 py-2 rounded-xl text-xs font-semibold tracking-wide transition-colors cursor-pointer disabled:opacity-50"
+                        className="flex-1 py-1.5 text-xs font-semibold rounded-md bg-[var(--accent)] hover:brightness-105 text-white transition-colors cursor-pointer text-center disabled:opacity-50"
                       >
-                        <span>📤 Upload Image</span>
+                        Upload Menu
                       </button>
-
-                      {hasEditableData && (
-                        <button
-                          onClick={() => openEditor(tv)}
-                          className="bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30 text-purple-300 px-3 py-2 rounded-xl text-xs font-semibold tracking-wide transition-colors cursor-pointer"
-                          title="Edit live text overlays"
-                        >
-                          ✏️
-                        </button>
-                      )}
                     </div>
                   </div>
                 </div>
@@ -622,81 +658,120 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
             })}
           </div>
         )}
+      </section>
 
-        {/* Figma Plugin Token Card */}
-        <div className="border border-white/10 rounded-2xl p-6 space-y-4">
-          <div>
-            <h2 className="font-semibold text-lg">Figma Plugin Access</h2>
-            <p className="text-sm text-neutral-400 mt-1">
-              You can push designs directly from Figma using the miniKast Plugin or upload images directly above.
-            </p>
-          </div>
-
-          {token ? (
-            <div className="space-y-3">
-              <div className="bg-neutral-900 rounded-lg px-4 py-3 flex items-center justify-between gap-4 font-mono text-sm break-all">
-                <span className="text-emerald-400">{token}</span>
-                <button
-                  onClick={copyToken}
-                  className="shrink-0 text-xs text-neutral-400 hover:text-white border border-white/10 px-3 py-1 rounded-md transition-colors cursor-pointer"
-                >
-                  {copied ? "Copied!" : "Copy"}
-                </button>
-              </div>
-              <p className="text-xs text-amber-500/80">⚠ Save this token now — it won&apos;t be shown again.</p>
+      {/* Account & Token Modal */}
+      {showAccountModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-[var(--surface)] border border-[var(--accent-soft)] rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-6 transition-colors duration-300 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-[var(--line)] pb-3">
+              <h2 className="text-lg font-bold text-[var(--foreground)]">Account Settings</h2>
+              <button
+                type="button"
+                onClick={() => setShowAccountModal(false)}
+                className="text-[var(--muted)] hover:text-[var(--foreground)] p-1 rounded-lg hover:bg-[var(--surface-soft)] cursor-pointer"
+              >
+                ✕
+              </button>
             </div>
-          ) : (
-            <button
-              onClick={generateToken}
-              disabled={tokenLoading}
-              className="bg-white/10 hover:bg-white/15 border border-white/10 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 cursor-pointer"
-            >
-              {tokenLoading ? "Generating…" : hasToken ? "Regenerate Token" : "Generate API Token"}
-            </button>
-          )}
-        </div>
-      </div>
 
-      {/* Screen Management Modal (Upload New Image & Delete Active Image) */}
+            <div className="space-y-4 text-sm">
+              <div>
+                <span className="text-xs uppercase font-semibold text-[var(--muted)] tracking-wider">Signed in as</span>
+                <p className="font-semibold text-base text-[var(--foreground)]">{userName || "User"}</p>
+              </div>
+
+              {/* Figma Plugin API Token */}
+              <div className="space-y-2 pt-3 border-t border-[var(--line)]">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs uppercase font-semibold text-[var(--muted)] tracking-wider">Figma Plugin API Token</span>
+                </div>
+                <p className="text-xs text-[var(--muted)]">
+                  Use this token in the miniKast Figma plugin to connect your account and push designs directly.
+                </p>
+
+                {token ? (
+                  <div className="space-y-2">
+                    <div className="bg-[var(--surface-soft)] border border-[var(--accent-soft)] rounded-lg p-3 flex items-center justify-between gap-2 font-mono text-xs break-all">
+                      <span className="text-[var(--foreground)] font-bold">{token}</span>
+                      <button
+                        type="button"
+                        onClick={copyToken}
+                        className="shrink-0 text-xs bg-[var(--accent)] text-white px-2.5 py-1 rounded hover:brightness-105 transition-colors cursor-pointer"
+                      >
+                        {copied ? "Copied!" : "Copy"}
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-amber-600 dark:text-amber-400 font-medium">
+                      ⚠ Copy this token now — it will not be shown again.
+                    </p>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={generateToken}
+                    disabled={tokenLoading}
+                    className="w-full bg-[var(--surface-soft)] border border-[var(--accent-soft)] text-[var(--foreground)] hover:bg-[var(--accent)] hover:text-white py-2 rounded-lg text-xs font-bold transition-colors disabled:opacity-50 cursor-pointer"
+                  >
+                    {tokenLoading ? "Generating…" : hasToken ? "Regenerate Figma Token" : "Generate Figma Token"}
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-2 border-t border-[var(--line)]">
+              <button
+                type="button"
+                onClick={() => setShowAccountModal(false)}
+                className="bg-[#f27200] hover:bg-[#ff8000] text-white px-5 py-2 rounded-full text-xs font-bold transition-colors cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Screen Management Modal */}
       {currentModalTv && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-neutral-900 border border-white/15 rounded-2xl max-w-2xl w-full max-h-[92vh] flex flex-col shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-[var(--surface)] border border-[var(--accent-soft)] rounded-2xl max-w-xl w-full max-h-[90vh] flex flex-col shadow-2xl transition-colors duration-300 animate-in fade-in zoom-in-95 duration-150">
             {/* Modal Header */}
-            <div className="p-5 border-b border-white/10 flex items-center justify-between">
+            <div className="p-5 border-b border-[var(--line)] flex items-center justify-between">
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="text-base font-bold text-white flex items-center gap-2">
-                    <span>📺 Screen: {currentModalTv.name}</span>
-                    <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                  <h2 className="text-base font-bold text-[var(--foreground)] flex items-center gap-2">
+                    <span>{currentModalTv.name}</span>
+                    <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-[var(--surface-soft)] text-[var(--foreground)] border border-[var(--accent-soft)]">
                       {currentModalTv.pairing_code}
                     </span>
-                  </h3>
-                  {isModalTvOnline ? (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                      <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                      Online
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-neutral-800 text-neutral-400 border border-neutral-700">
-                      <span className="size-1.5 rounded-full bg-neutral-500" />
-                      Offline
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs text-neutral-400 mt-1 flex items-center gap-1.5 flex-wrap">
-                  <span>{formatScreenSpecs(currentModalTv)}</span>
-                  <span className="text-neutral-600">&bull;</span>
-                  <span className={isModalTvOnline ? "text-emerald-400/80 font-medium" : "text-neutral-400"}>
-                    Heartbeat: {formatLastSeen(currentModalTv.last_seen_at, currentModalTv.paired_at, nowTime)}
+                  </h2>
+                  <span
+                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
+                      isModalTvOnline
+                        ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                        : "bg-neutral-500/10 text-neutral-500 border-neutral-500/20"
+                    }`}
+                  >
+                    <span className={`size-1.5 rounded-full ${isModalTvOnline ? "bg-emerald-500 animate-pulse" : "bg-neutral-400"}`} />
+                    {isModalTvOnline ? "Online" : "Offline"}
                   </span>
+                </div>
+                <p className="text-xs text-[var(--muted)] mt-1 flex items-center gap-1.5 flex-wrap font-normal">
+                  <span>{getScreenSpecs(currentModalTv).resolution}</span>
+                  <span>&bull;</span>
+                  <span>{getScreenSpecs(currentModalTv).ratio}</span>
+                  <span>&bull;</span>
+                  <span>{getScreenSpecs(currentModalTv).orientation}</span>
                 </p>
               </div>
               <button
+                type="button"
                 onClick={() => {
                   setActiveScreen(null);
                   setConfirmClearImage(false);
                 }}
-                className="text-neutral-400 hover:text-white p-1.5 rounded-lg hover:bg-white/10 cursor-pointer"
+                className="text-[var(--muted)] hover:text-[var(--foreground)] p-1.5 rounded-lg hover:bg-[var(--surface-soft)] cursor-pointer"
               >
                 ✕
               </button>
@@ -704,10 +779,10 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
 
             {/* Modal Body */}
             <div className="p-6 overflow-y-auto space-y-6 flex-1">
-              {/* Current Active Image Preview */}
+              {/* Current Active Preview */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs uppercase font-semibold tracking-wider text-neutral-400">
+                  <span className="text-xs uppercase font-semibold tracking-wider text-[var(--muted)]">
                     Currently Displaying
                   </span>
                   {currentModalTv.current_menu_url && (
@@ -715,14 +790,14 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
                       href={currentModalTv.current_menu_url}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-xs text-emerald-400 hover:underline"
+                      className="text-xs text-[var(--accent)] hover:underline font-semibold"
                     >
-                      Open Full Size &rarr;
+                      Open Full Size ↗
                     </a>
                   )}
                 </div>
 
-                <div className="aspect-video bg-neutral-950 border border-white/10 rounded-xl overflow-hidden flex items-center justify-center relative">
+                <div className="aspect-video bg-[var(--surface-soft)] border border-[var(--accent-soft)] rounded-xl overflow-hidden flex items-center justify-center relative">
                   {currentModalTv.current_menu_url ? (
                     <img
                       src={currentModalTv.current_menu_url}
@@ -731,61 +806,58 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
                     />
                   ) : (
                     <div className="text-center p-6 space-y-1">
-                      <span className="text-3xl block">🖼️</span>
-                      <p className="text-sm font-medium text-neutral-400">No Image Active on Screen</p>
-                      <p className="text-xs text-neutral-600">The TV display is currently on standby awaiting a menu.</p>
+                      <p className="text-sm font-semibold text-[var(--muted)]">No Menu Loaded</p>
+                      <p className="text-xs text-[var(--muted)]">Display is currently on standby.</p>
                     </div>
                   )}
                 </div>
 
-                {/* Delete / Clear Active Image Button */}
+                {/* Clear Image Option */}
                 {currentModalTv.current_menu_url && (
                   <div className="pt-2 flex items-center justify-between">
-                    <p className="text-xs text-neutral-500">
-                      Remove the current menu image from this screen without unpairing the TV.
+                    <p className="text-xs text-[var(--muted)]">
+                      Clear menu graphic from screen
                     </p>
                     {confirmClearImage ? (
                       <div className="flex items-center gap-2">
                         <button
+                          type="button"
                           onClick={() => handleClearImage(currentModalTv.id)}
                           disabled={isClearingImage}
-                          className="bg-red-500 hover:bg-red-600 text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50 cursor-pointer shadow-md shadow-red-500/20"
+                          className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-xs font-semibold transition-colors disabled:opacity-50 cursor-pointer"
                         >
-                          {isClearingImage ? "Clearing…" : "Confirm Delete Image"}
+                          {isClearingImage ? "Clearing…" : "Confirm Clear"}
                         </button>
                         <button
+                          type="button"
                           onClick={() => setConfirmClearImage(false)}
-                          disabled={isClearingImage}
-                          className="text-neutral-400 hover:text-white text-xs px-2 py-1 cursor-pointer"
+                          className="text-[var(--muted)] text-xs hover:underline cursor-pointer"
                         >
                           Cancel
                         </button>
                       </div>
                     ) : (
                       <button
+                        type="button"
                         onClick={() => setConfirmClearImage(true)}
-                        className="flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+                        className="text-xs text-red-500 hover:underline cursor-pointer font-medium"
                       >
-                        <svg className="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                        <span>Delete / Clear Image</span>
+                        Clear Menu
                       </button>
                     )}
                   </div>
                 )}
               </div>
 
-              {/* Upload New Image Section */}
-              <div className="space-y-3 pt-4 border-t border-white/10">
+              {/* Upload Dropzone */}
+              <div className="space-y-3 pt-4 border-t border-[var(--line)]">
                 <div>
-                  <h4 className="text-sm font-semibold text-white">Upload New Menu Image</h4>
-                  <p className="text-xs text-neutral-400 mt-0.5">
-                    Select or drop an image file (PNG, JPG, WebP) to push immediately to this TV screen.
+                  <h3 className="text-sm font-bold text-[var(--foreground)]">Upload New Menu</h3>
+                  <p className="text-xs text-[var(--muted)] mt-0.5">
+                    Drag & drop or select an image file to push immediately to this display.
                   </p>
                 </div>
 
-                {/* Drag and drop upload zone */}
                 <div
                   onDragOver={(e) => {
                     e.preventDefault();
@@ -801,10 +873,10 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
                     }
                   }}
                   onClick={() => modalFileInputRef.current?.click()}
-                  className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-3 ${
+                  className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2 ${
                     dragOver
-                      ? "border-emerald-400 bg-emerald-500/10"
-                      : "border-white/15 bg-white/5 hover:border-white/30 hover:bg-white/[0.07]"
+                      ? "border-[var(--accent)] bg-[var(--surface-soft)]"
+                      : "border-[var(--accent-soft)] bg-[var(--surface-soft)] hover:border-[var(--accent)]"
                   }`}
                 >
                   <input
@@ -820,31 +892,18 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
                     }}
                   />
 
-                  <div className="size-12 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-                    <svg className="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                    </svg>
-                  </div>
+                  <svg className="size-6 text-[var(--accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                  </svg>
 
-                  <div className="space-y-1">
-                    <p className="text-sm font-semibold text-white">
-                      {isUploading ? uploadProgressText : "Click to browse or drag & drop image here"}
-                    </p>
-                    <p className="text-xs text-neutral-400">
-                      Supports PNG, JPG, JPEG, and WebP (up to 20MB)
-                    </p>
-                  </div>
-
-                  {isUploading && (
-                    <div className="flex items-center gap-2 text-xs text-emerald-400 font-semibold mt-2">
-                      <div className="size-3 rounded-full border-2 border-emerald-400 border-t-transparent animate-spin" />
-                      <span>{uploadProgressText}</span>
-                    </div>
-                  )}
+                  <p className="text-xs sm:text-sm font-semibold text-[var(--foreground)]">
+                    {isUploading ? uploadProgressText : "Click to select or drag image here"}
+                  </p>
+                  <p className="text-[11px] text-[var(--muted)]">PNG, JPG, WebP (up to 20MB)</p>
 
                   {uploadSuccess && (
-                    <div className="text-xs font-semibold text-emerald-400 mt-2">
-                      ✓ Uploaded and pushed successfully to TV screen!
+                    <div className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 mt-1">
+                      ✓ Uploaded and pushed successfully!
                     </div>
                   )}
                 </div>
@@ -852,16 +911,15 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
             </div>
 
             {/* Modal Footer */}
-            <div className="p-4 border-t border-white/10 bg-neutral-950 flex items-center justify-between">
-              <span className="text-xs text-neutral-500">
-                Pushed images appear immediately on the paired TV screen.
-              </span>
+            <div className="p-4 border-t border-[var(--line)] bg-[var(--surface)] flex items-center justify-between">
+              <span className="text-xs text-[var(--muted)]">Changes reflect immediately on TV.</span>
               <button
+                type="button"
                 onClick={() => {
                   setActiveScreen(null);
                   setConfirmClearImage(false);
                 }}
-                className="bg-white text-neutral-950 font-semibold px-5 py-2 rounded-xl text-xs hover:bg-neutral-200 transition-colors cursor-pointer"
+                className="bg-[#f27200] hover:bg-[#ff8000] text-white font-bold px-5 py-1.5 rounded-full text-xs transition-colors cursor-pointer"
               >
                 Done
               </button>
@@ -870,100 +928,18 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
         </div>
       )}
 
-      {/* Live Text & Price Editor Modal (Legacy/Hybrid) */}
-      {editingTv && editingData && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-neutral-900 border border-white/15 rounded-2xl max-w-2xl w-full max-h-[88vh] flex flex-col shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-            {/* Modal Header */}
-            <div className="p-5 border-b border-white/10 flex items-center justify-between">
-              <div>
-                <h3 className="text-base font-bold text-white flex items-center gap-2">
-                  <span>✏️ Edit Live Menu & Prices</span>
-                  <span className="text-xs font-normal px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                    {editingTv.name}
-                  </span>
-                </h3>
-                <p className="text-xs text-neutral-400 mt-0.5">
-                  Changes sync live to your TV screen immediately upon saving.
-                </p>
-              </div>
-              <button
-                onClick={() => setEditingTv(null)}
-                className="text-neutral-400 hover:text-white p-1 rounded-lg hover:bg-white/10 cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Modal Body - Field Inputs */}
-            <div className="p-5 overflow-y-auto space-y-4 flex-1">
-              {editingData.elements && (
-                <div className="space-y-3">
-                  <div className="text-xs uppercase tracking-wider text-neutral-500 font-semibold mb-2">
-                    Extracted Text & Price Elements ({editingData.elements.length})
-                  </div>
-                  <div className="grid grid-cols-1 gap-3">
-                    {editingData.elements.map((el: HybridElement) => (
-                      <div
-                        key={el.id}
-                        className="bg-white/5 border border-white/10 rounded-xl p-3.5 space-y-1.5 hover:border-white/20 transition-all"
-                      >
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="font-semibold text-neutral-300 truncate max-w-xs">
-                            {el.name}
-                          </span>
-                          {el.isPrice ? (
-                            <span className="text-[10px] bg-emerald-500/20 text-emerald-400 font-bold px-2 py-0.5 rounded">
-                              PRICE
-                            </span>
-                          ) : (
-                            <span className="text-[10px] text-neutral-500">TEXT</span>
-                          )}
-                        </div>
-                        <input
-                          type="text"
-                          value={el.text}
-                          onChange={(e) => handleHybridTextChange(el.id, e.target.value)}
-                          className="w-full bg-neutral-950 border border-white/15 rounded-lg px-3 py-2 text-sm text-white font-medium focus:border-emerald-400 focus:outline-none"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Modal Footer */}
-            <div className="p-4 border-t border-white/10 bg-neutral-950 flex items-center justify-between">
-              {saveSuccess ? (
-                <span className="text-xs font-semibold text-emerald-400 flex items-center gap-1.5">
-                  ✓ Pushed live to TV screen!
-                </span>
-              ) : (
-                <span className="text-xs text-neutral-500">
-                  Clicking publish broadcasts changes over Realtime.
-                </span>
-              )}
-
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setEditingTv(null)}
-                  className="px-4 py-2 text-xs font-medium text-neutral-400 hover:text-white rounded-lg transition-colors cursor-pointer"
-                >
-                  Close
-                </button>
-                <button
-                  onClick={saveAndPushLive}
-                  disabled={savingTv}
-                  className="bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold px-5 py-2 rounded-xl text-xs tracking-wide transition-colors disabled:opacity-50 cursor-pointer shadow-lg shadow-emerald-500/20"
-                >
-                  {savingTv ? "Publishing…" : "🚀 Publish Live to TV"}
-                </button>
-              </div>
-            </div>
+      {/* Footer */}
+      <footer className="w-full bg-[var(--surface)] border-t border-[var(--line)] z-10 transition-colors duration-300 mt-auto">
+        <div className="max-w-7xl mx-auto px-4 sm:px-8 py-4 flex flex-col sm:flex-row justify-between items-center gap-3 text-xs text-[#547a7c] dark:text-[#a3b7b5]">
+          <span>© {new Date().getFullYear()} miniKast. All rights reserved.</span>
+          <div className="flex items-center gap-1">
+            <span>Contact:</span>
+            <a href="mailto:hello@miniKast.com" className="text-[#008996] dark:text-[#57d6d3] hover:underline font-semibold">
+              hello@miniKast.com
+            </a>
           </div>
         </div>
-      )}
-    </div>
+      </footer>
+    </main>
   );
 }

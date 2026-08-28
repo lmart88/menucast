@@ -155,6 +155,18 @@ The MVP delivers a commercial, self-serve SaaS product ready for public customer
 - Stripe Customer Portal for managing payment methods, viewing invoices, and upgrading/canceling subscriptions.
 - Automated subscription entitlement gating (enforcing screen limits per active plan).
 
+#### FR-1.5 Dashboard & Displays Screen Management UI Redesign (`/dashboard`)
+- **Figma Design System Alignment (`node-id=1468:7181`)**:
+  - Light mint/cyan radial backdrop with subtle dot grid pattern (`#f7fcfc` to `#b7eaed`).
+  - Standardized brand header featuring miniKast logo/wordmark, "Install App" action, secondary links ("Account", "Sign Out"), vertical separator, and dark/light theme switch.
+  - Page title row with bold "Displays" heading and brand orange "Pair New Screen" primary CTA (`#f27200` / `#ff8000`).
+  - Screen cards (`#FFFFFF`, `1px solid #b7eaed`, `8px` rounded corners, soft drop shadow) showing:
+    - Aspect-ratio-preserving preview slot (`16:9` / `9:16`) with "Awaiting menu" placeholder or live pushed menu thumbnail.
+    - Top-left status pill badge with indicator dot and elapsed time / status.
+    - Bottom metadata row with screen name, trash icon button for deletion, and hardware specs (`resolution`, `aspect ratio`, `orientation`).
+  - Standardized footer with copyright notice and hello@miniKast.com contact link.
+- **Specification Reference**: [`docs/spec-dashboard-ui-redesign.md`](file:///Users/battosai/Dev/menucast/docs/spec-dashboard-ui-redesign.md)
+
 ---
 
 ## 6. Features Deferred to Backlog ([`docs/ideas.md`](file:///Users/battosai/Dev/menucast/docs/ideas.md))
