@@ -47,18 +47,13 @@ function SourceIcon({ kind }: { kind: "image" | "pdf" | "video" | "figma" }) {
 }
 
 function DemoMenu() {
-  return <div>
-    <img src="/logo-minikast.svg" alt="miniKast logo" />
-      <div className="menu-art-container">
-        <div className="menu-art-noise" aria-hidden="true">
-          <div className="menu-art" role="img" aria-label="Example digital menu displayed on a TV">
-            <div className="menu-brand"><span className="menu-mark">m</span><span>morning ritual</span></div>
-            <div className="menu-heading">GOOD FOOD<br /><em>GOOD MOOD</em></div>
-            <div className="menu-items"><span>AVOCADO TOAST <b>$12</b></span><span>RICOTTA PANCAKES <b>$14</b></span><span>SEASONAL BOWL <b>$16</b></span></div>
-            <div className="menu-footer">BRUNCH · COFFEE · GOOD COMPANY</div>
-          </div>
-        </div>
-      </div>
+  return <div className="menu-art-container">
+    <div className="menu-art" role="img" aria-label="Example digital menu displayed on a TV">
+      <div className="menu-brand"><span className="menu-mark">m</span><span>morning ritual</span></div>
+      <div className="menu-heading">GOOD FOOD<br /><em>GOOD MOOD</em></div>
+      <div className="menu-items"><span>AVOCADO TOAST <b>$12</b></span><span>RICOTTA PANCAKES <b>$14</b></span><span>SEASONAL BOWL <b>$16</b></span></div>
+      <div className="menu-footer">BRUNCH · COFFEE · GOOD COMPANY</div>
+    </div>
   </div>
 }
 
@@ -118,6 +113,7 @@ export default function HomePage() {
       </div>
 
       <div className="demo-wrap">
+        <img className="demo-logo" src="/logo-minikast.svg" alt="miniKast logo" />
         <div className="demo-display"><DemoMenu /></div>
         <div className="source-cues" aria-label="Supported source formats">
           {(["image", "pdf", "video", "figma"] as const).map((kind) => <span className="source-tile" key={kind} role="img" aria-label={`${kind.toUpperCase()} source format`}><SourceIcon kind={kind} /></span>)}
