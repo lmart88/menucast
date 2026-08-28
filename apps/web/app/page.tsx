@@ -34,13 +34,15 @@ function ThemeAwareLogo({ theme }: { theme: Theme }) {
 }
 
 function SourceIcon({ kind }: { kind: "image" | "pdf" | "video" | "figma" }) {
+  const iconSources = {
+    image: "/source-image.svg",
+    pdf: "/source-pdf.svg",
+    video: "/source-video.svg",
+    figma: "/source-figma.svg",
+  };
+
   return <span className={`source-icon source-icon-${kind}`} aria-hidden="true">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
-      {kind === "image" && <><rect x="4" y="5" width="16" height="14" rx="2" /><circle cx="9" cy="10" r="1.4" /><path d="m5 17 4-4 3 3 2-2 5 4" /></>}
-      {kind === "pdf" && <><path d="M7 3h7l3 3v15H7z" /><path d="M14 3v4h4M9 15h6M9 11h3" /></>}
-      {kind === "video" && <><rect x="3.5" y="5" width="17" height="14" rx="2" /><path d="m10 9 5 3-5 3z" /></>}
-      {kind === "figma" && <><path d="M9 3h3v6H9a3 3 0 1 1 0-6ZM12 3h3a3 3 0 1 1 0 6h-3zM9 9h3v6H9a3 3 0 1 1 0-6ZM12 9h3a3 3 0 1 1 0 6h-3zM9 15h3v3a3 3 0 1 1-3-3Z" /></>}
-    </svg>
+    <img src={iconSources[kind]} alt="" />
   </span>;
 }
 
@@ -53,7 +55,13 @@ function DemoMenu() {
   </div>;
 }
 
-const platforms = ["Web", "Android TV", "Fire TV", "Apple TV", "Smart TVs"];
+const platforms = [
+  { name: "Samsung", src: "/platform-samsung.svg", className: "platform-logo-samsung" },
+  { name: "LG", src: "/platform-lg.svg", className: "platform-logo-lg" },
+  { name: "Android", src: "/platform-android.svg", className: "platform-logo-android" },
+  { name: "Apple", src: "/platform-apple.svg", className: "platform-logo-apple" },
+  { name: "Fire TV", src: "/platform-fire-tv.svg", className: "platform-logo-fire-tv" },
+];
 
 export default function HomePage() {
   const [theme, setTheme] = useState<Theme>(() => {
@@ -90,7 +98,6 @@ export default function HomePage() {
 
     <section className="hero-section">
       <div className="hero-copy">
-        <p className="eyebrow"><span className="status-dot" /> Designed in Figma. Live on your display.</p>
         <h1>Your menu.<br /><span>Any TV. Instantly.</span></h1>
         <p className="hero-description">Upload your design. Publish to your screen. Just beautiful menus on display.</p>
       </div>
@@ -106,7 +113,7 @@ export default function HomePage() {
 
     <section className="platform-section" aria-labelledby="platform-title">
       <p id="platform-title">Available on</p>
-      <div className="platform-list">{platforms.map((platform) => <span key={platform} className="platform-item"><span className="platform-symbol" aria-hidden="true" />{platform}</span>)}</div>
+      <div className="platform-list">{platforms.map((platform) => <span key={platform.name} className={`platform-item ${platform.className}`}><img src={platform.src} alt={platform.name} /></span>)}</div>
     </section>
 
     <footer className="home-footer"><span>© 2026 MenuCast. All rights reserved.</span><span>Contact: <a href="mailto:hello@menucast.com">hello@menucast.com</a></span></footer>
