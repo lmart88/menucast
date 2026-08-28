@@ -130,10 +130,17 @@ The MVP delivers a commercial, self-serve SaaS product ready for public customer
 - FAQ section addressing hardware compatibility (Fire TV, Chromecast, Smart TVs).
 
 #### FR-1.2 Self-Serve User Accounts & Authentication
-- User registration and login via Email/Password and social providers (Google/GitHub).
-- Password reset, email verification, and session management.
-- User profile dashboard managing account settings and API tokens.
-- Secure multi-tenant database isolation with PostgreSQL Row-Level Security (RLS).
+- **Authentication Scope (MVP)**: Streamlined Email & Password authentication for registration (`/register`) and sign-in (`/login`).
+- **UI & Design System Alignment**:
+  - Full-screen centered card layout on mint radial gradient backdrop (`#f7fcfc` / `#b7eaed` radial tint).
+  - Centered brand header with `miniKast` logo.
+  - Floating card (`#FFFFFF` background, `#b7eaed` border, `16px` border-radius, soft depth shadow).
+  - Responsive form controls with clear typography (`Nunito` font stack), focused input states, and accessible error/loading feedback.
+  - Vibrant brand orange primary CTA (`Create Account` / `Sign In`) and subtle teal navigation links (`Back to Login` / `Create an account`).
+- **Password Reset & Session Management**:
+  - Secure session token persistence.
+  - Password reset / recovery request handling (`/forgot-password`).
+- **Data Isolation**: Multi-tenant isolation enforced with PostgreSQL Row-Level Security (RLS).
 
 #### FR-1.3 Extended TV OS Support
 - Native and packaged container distribution for major smart TV operating systems:
@@ -156,6 +163,7 @@ The following items are deferred to [`docs/ideas.md`](file:///Users/battosai/Dev
 
 | Feature | Category | Reason for Deferral |
 | :--- | :--- | :--- |
+| **Social OAuth Login (Google / GitHub)** | Auth / Accounts | Email & Password delivers complete self-serve access without third-party OAuth app setup overhead for MVP. |
 | **Video Upload** | Player / Storage | High bandwidth/storage costs; static 2x graphics satisfy 90% of core restaurant use cases. |
 | **Push History & Rollback** | Versioning | Nice-to-have; single active menu graphic is sufficient for MVP. |
 | **Advanced Transitions** | Display Engine | Standard double-buffered crossfade is already zero-flicker and optimal. |

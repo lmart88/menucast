@@ -4,6 +4,7 @@ import { Suspense, useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { AuthShell } from "../components/auth-shell";
 
 function LoginForm() {
   const [email, setEmail] = useState("");
@@ -19,68 +20,110 @@ function LoginForm() {
     setLoading(true);
     setError("");
 
-    const result = await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-    });
+    try {
+      const result = await signIn("credentials", {
+        email: email.trim().toLowerCase(),
+        password,
+        redirect: false,
+      });
 
-    if (result?.error) {
-      setError("Invalid email or password");
+      if (result?.error) {
+        setError("Invalid email or password");
+        setLoading(false);
+      } else {
+        router.push(callbackUrl);
+      }
+    } catch {
+      setError("An unexpected error occurred. Please try again.");
       setLoading(false);
-    } else {
-      router.push(callbackUrl);
     }
   }
 
   return (
-    <div className="min-h-screen bg-neutral-950 flex items-center justify-center px-4">
-      <div className="w-full max-w-sm space-y-8">
-        <div className="text-center">
-          <Link href="/" className="text-xl font-semibold text-white tracking-tight">
-            miniKast
-          </Link>
-          <h2 className="mt-6 text-2xl font-semibold text-white">Sign in</h2>
-          <p className="mt-1 text-sm text-neutral-500">Welcome back to your dashboard</p>
+    <div className="w-full max-w-[380px] flex flex-col items-baseline gap-4">
+      {/* Centered Logo */}
+      <div className="w-16 h-12 flex items-center justify-center -mb-6 z-10">
+        <img src="/logo-minikast.svg" alt="miniKast" className="w-100 h-auto" />
+      </div>
+
+      {/* Floating Card */}
+      <div className="w-full bg-[var(--surface)] border border-[var(--accent-soft)] rounded-2xl p-6 sm:p-8 shadow-sm flex flex-col gap-6 transition-colors duration-300">
+        <div className="text-center space-y-1">
+          <h1 className="text-lg font-bold text-[var(--foreground)] tracking-tight">
+            Sign In
+          </h1>
+          <p className="text-sm text-[var(--muted)]">
+            Welcome back to your dashboard
+          </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
-            <div className="bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3 text-sm text-red-400">
+            <div
+              role="alert"
+              className="bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-2.5 text-sm text-red-500 font-medium"
+            >
               {error}
             </div>
           )}
-          <div className="space-y-2">
-            <label htmlFor="email" className="text-sm text-neutral-400">Email</label>
+
+          <div className="space-y-1.5">
+            <label htmlFor="email" className="sr-only">
+              Email
+            </label>
             <input
               id="email"
               type="email"
               required
+              autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder-neutral-600 focus:outline-none focus:ring-2 focus:ring-white/20 text-sm"
-              placeholder="you@restaurant.com"
+              placeholder="Email"
+              className="w-full h-10 bg-[var(--surface)] border border-[var(--accent-soft)] rounded-lg px-4 text-sm text-[var(--foreground)] placeholder-[var(--muted)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent transition-all"
             />
           </div>
-          <div className="space-y-2">
-            <label htmlFor="password" className="text-sm text-neutral-400">Password</label>
+
+          <div className="space-y-1.5">
+            <label htmlFor="password" className="sr-only">
+              Password
+            </label>
             <input
               id="password"
               type="password"
               required
+              autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder-neutral-600 focus:outline-none focus:ring-2 focus:ring-white/20 text-sm"
-              placeholder="••••••••"
+              placeholder="Password"
+              className="w-full h-10 bg-[var(--surface)] border border-[var(--accent-soft)] rounded-lg px-4 text-sm text-[var(--foreground)] placeholder-[var(--muted)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent transition-all"
             />
           </div>
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-white text-neutral-950 py-2.5 rounded-lg font-semibold text-sm hover:bg-neutral-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? "Signing in…" : "Sign in"}
-          </button>
+
+          <div className="space-y-3 pt-2">
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full h-10 bg-[#f27200] hover:bg-[#d96600] text-white font-bold text-sm rounded-lg shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center cursor-pointer"
+            >
+              {loading ? "Signing in…" : "Login"}
+            </button>
+
+            <Link
+              href="/register"
+              className="w-full h-10 bg-transparent border border-[var(--accent-soft)] hover:bg-[var(--surface-soft)] text-[var(--foreground)] font-medium text-sm rounded-lg transition-all flex items-center justify-center"
+            >
+              Create Account
+            </Link>
+          </div>
+
+          <div className="text-center pt-2">
+            <Link
+              href="/forgot-password"
+              className="text-sm font-medium text-[var(--accent)] hover:underline"
+            >
+              Forgot Password?
+            </Link>
+          </div>
         </form>
       </div>
     </div>
@@ -89,14 +132,16 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen bg-neutral-950 flex items-center justify-center">
-          <div className="size-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-        </div>
-      }
-    >
-      <LoginForm />
-    </Suspense>
+    <AuthShell>
+      <Suspense
+        fallback={
+          <div className="w-full max-w-[380px] bg-[var(--surface)] border border-[var(--accent-soft)] rounded-2xl p-8 shadow-sm flex items-center justify-center min-h-[360px]">
+            <div className="w-8 h-8 border-2 border-[var(--accent-soft)] border-t-[var(--accent)] rounded-full animate-spin" />
+          </div>
+        }
+      >
+        <LoginForm />
+      </Suspense>
+    </AuthShell>
   );
 }

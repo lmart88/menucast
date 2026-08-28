@@ -16,11 +16,11 @@
 | **EPIC-2** | Image Upload & Figma Plugin (Image Only) | P0 | POC | 🟢 Completed | 4 Stories |
 | **EPIC-3** | TV Display Engine (PWA & Android TV) | P0 | POC | 🟢 Completed | 3 Stories |
 | **EPIC-4** | Marketing Landing Page (`/`) | P1 | MVP | ⚪ Planned | 3 Stories |
-| **EPIC-5** | Self-Serve User Accounts & Auth | P1 | MVP | ⚪ Planned | 3 Stories |
+| **EPIC-5** | Self-Serve User Accounts & Auth | P1 | MVP | ⚪ Planned | 2 Stories |
 | **EPIC-6** | Extended TV OS Support (tvOS / Smart TV) | P1 | MVP | ⚪ Planned | 2 Stories |
 | **EPIC-7** | Stripe Subscriptions & Billing Gating | P1 | MVP | ⚪ Planned | 3 Stories |
 
-*(Note: Video upload, History, Transitions, Schedule, Multi-screen Fleet Management, Synchronization, and Live Menu HTML/CSS Overlays are parked in [`docs/ideas.md`](file:///Users/battosai/Dev/menucast/docs/ideas.md)).*
+*(Note: Social OAuth Login, Video upload, History, Transitions, Schedule, Multi-screen Fleet Management, Synchronization, and Live Menu HTML/CSS Overlays are parked in [`docs/ideas.md`](file:///Users/battosai/Dev/menucast/docs/ideas.md)).*
 
 ---
 
@@ -88,14 +88,17 @@
 
 ### EPIC-5: Self-Serve User Accounts & Auth
 
-#### STORY-5.1: Self-Serve Registration & Email Authentication
-- [ ] **Given** a new user on `/register`, **When** submitting email and password, **Then** an account is created in PostgreSQL with hashed credentials, email verification token sent, and user is redirected to `/dashboard`.
+#### STORY-5.1: Self-Serve Registration & Email Authentication (Redesigned UI)
+- [ ] **Given** a visitor navigating to `/register` or `/login`, **When** the page loads, **Then** it renders the updated authentication layout matching Figma node `1456:9252` (mint radial gradient backdrop, miniKast logo, floating rounded card container `#FFFFFF` with `#b7eaed` border).
+- [ ] **Given** a new user on `/register`, **When** submitting email, password, and confirm password, **Then** inputs are validated, account credentials are encrypted and stored in PostgreSQL, and user is redirected to `/dashboard`.
+- [ ] **Given** an existing user on `/login`, **When** entering email and password, **Then** credentials are authenticated via NextAuth credentials provider, session is created, and user is redirected to `/dashboard` (or `callbackUrl`).
+- [ ] **Given** an invalid password, unregistered email, or network failure, **When** submitting auth forms, **Then** inline contextual error messages are displayed with clear visual hierarchy.
 
-#### STORY-5.2: Social OAuth Login (Google & GitHub)
-- [ ] **Given** a user on `/login` or `/register`, **When** clicking "Continue with Google" or "Continue with GitHub", **Then** NextAuth handles OAuth authentication and links or provisions the user profile.
-
-#### STORY-5.3: Password Reset & Profile Account Management
+#### STORY-5.2: Password Reset & Profile Account Management
 - [ ] **Given** an existing user, **When** requesting password reset at `/forgot-password`, **Then** a secure one-time reset link is dispatched, allowing the user to reset their credentials securely.
+- [ ] **Given** an authenticated user on `/dashboard/settings` or account modal, **When** updating their profile, **Then** name/email/password changes are persisted securely.
+
+*(Note: Social OAuth Login is deferred to [`docs/ideas.md`](file:///Users/battosai/Dev/menucast/docs/ideas.md)).*
 
 ---
 
