@@ -37,6 +37,11 @@
 - [x] **Given** an active TV running `/tv`, **When** the player is open, **Then** it sends a background heartbeat ping (`POST /api/tv/heartbeat`) every 30 seconds, updating `tvs.last_seen_at`.
 - [x] **Given** the dashboard on `/dashboard`, **When** displaying screen cards, **Then** screens with `last_seen_at` within 60 seconds show a pulsing green `● Online` badge; otherwise `○ Offline`.
 
+#### STORY-1.3: TV Display Pairing Screen UI Redesign (`node-id=1459:10382`)
+- [x] **Given** an unconfigured TV or visitor loading `/tv`, **When** the pairing state is active, **Then** it renders the updated design matching Figma node `1459:10382` with light mint radial atmosphere, high-contrast QR code container framed with `4px solid #008996`, tilted perched bird icon, and countdown refresh timer.
+- [x] **Given** the pairing screen, **When** displaying the code, **Then** it renders the floating pairing code card (`border 1px solid #b7eaed`, `rounded-2xl`) with "Pairing Code" label and bold `#008996` code.
+- [x] **Given** a user scanning the QR code or submitting the code, **When** the pairing event is received, **Then** the TV transitions smoothly to the paired/displaying state.
+
 ---
 
 ### EPIC-2: Image Upload & Figma Plugin (Image Only)

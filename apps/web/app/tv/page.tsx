@@ -986,113 +986,109 @@ export default function TvPage() {
   // State 1: Pairing Screen
   if (state === "pairing") {
     return (
-      <div className="min-h-screen w-screen bg-neutral-950 text-white flex flex-col items-center justify-between p-6 md:p-12 select-none overflow-hidden relative">
-        {/* Subtle Ambient Background Glow */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
+      <div className="home-shell min-h-screen w-screen flex flex-col justify-between select-none overflow-hidden relative bg-[var(--background)] text-[var(--foreground)] transition-colors duration-300">
+        <div className="home-noise" aria-hidden="true" />
 
-        {/* Top Header Bar */}
-        <header className="w-full flex items-center justify-between z-10">
-          <div className="flex items-center gap-3 bg-white/5 border border-white/10 px-4 py-2 rounded-full backdrop-blur-md">
-            <div className="size-2.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-xs font-semibold tracking-wider uppercase text-neutral-300">
-              miniKast TV Player
+        {/* Top Header Controls */}
+        <header className="w-full flex items-center justify-between px-6 py-4 z-20">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#008996]/10 text-[#008996] border border-[#008996]/20">
+              <span className="size-2 rounded-full bg-[#008996] animate-pulse" />
+              miniKast Display
             </span>
           </div>
 
-          <div className="flex items-center gap-3 text-xs text-neutral-400">
+          <div className="flex items-center gap-2 text-xs text-[#547a7c]">
             <button
               onClick={toggleFullscreen}
-              className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 transition-colors flex items-center gap-1.5"
+              className="px-3 py-1.5 rounded-lg bg-white/80 hover:bg-white border border-[#b7eaed] text-[#0d1f21] transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
             >
-              <kbd className="px-1.5 py-0.5 bg-neutral-800 border border-neutral-700 rounded text-[10px] font-mono text-neutral-300">F</kbd>
+              <kbd className="px-1.5 py-0.5 bg-[#f7fcfc] border border-[#b7eaed] rounded text-[10px] font-mono text-[#547a7c]">F</kbd>
               <span>{isFullscreen ? "Exit Fullscreen" : "Fullscreen"}</span>
             </button>
             <button
               onClick={() => initTv(true)}
-              className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 transition-colors flex items-center gap-1.5"
+              className="px-3 py-1.5 rounded-lg bg-white/80 hover:bg-white border border-[#b7eaed] text-[#0d1f21] transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
             >
-              <kbd className="px-1.5 py-0.5 bg-neutral-800 border border-neutral-700 rounded text-[10px] font-mono text-neutral-300">R</kbd>
+              <kbd className="px-1.5 py-0.5 bg-[#f7fcfc] border border-[#b7eaed] rounded text-[10px] font-mono text-[#547a7c]">R</kbd>
               <span>New Code</span>
             </button>
           </div>
         </header>
 
-        {/* Main Pairing Card */}
-        <main className="max-w-4xl w-full grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 items-center my-auto z-10 animate-in fade-in zoom-in-95 duration-500">
-          {/* Left: High-Contrast QR Code Card */}
-          <div className="flex flex-col items-center justify-center">
-            <div className="bg-white p-6 rounded-3xl shadow-2xl shadow-emerald-950/40 border-4 border-white/90">
-              {pairingCode ? (
-                <QRCodeSVG
-                  value={pairUrl}
-                  size={240}
-                  level="H"
-                  includeMargin={false}
-                />
-              ) : (
-                <div className="size-[240px] flex items-center justify-center">
-                  <div className="size-8 rounded-full border-2 border-neutral-800 border-t-transparent animate-spin" />
+        {/* Main Pairing Card (Matching Figma node 1459:10382) */}
+        <main className="flex-1 flex items-center justify-center p-6 z-10">
+          <div className="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-10 max-w-4xl w-full animate-in fade-in zoom-in-95 duration-500">
+            {/* Left Column: High-Contrast QR Code Card with Perched Mascot */}
+            <div className="flex flex-col items-center">
+              <div className="relative">
+                {/* Perched Mascot tilted at 33.52deg on top-left of QR frame */}
+                <div className="absolute -top-11 -left-3.5 z-20 pointer-events-none rotate-[33.52deg]">
+                  <img
+                    src="/logo-minikast.svg"
+                    alt="miniKast mascot"
+                    className="w-12 h-auto"
+                  />
                 </div>
-              )}
-            </div>
-            <p className="text-xs text-neutral-400 font-medium mt-4 flex items-center gap-2">
-              <span className="size-1.5 rounded-full bg-emerald-400" />
-              Point your phone camera at the QR code
-            </p>
-          </div>
 
-          {/* Right: Step-by-Step Instructions & Code */}
-          <div className="flex flex-col space-y-6 text-left">
-            <div>
-              <span className="text-xs uppercase tracking-widest text-emerald-400 font-semibold">
-                Screen Setup
-              </span>
-              <h1 className="text-3xl md:text-4xl font-bold tracking-tight mt-1">
-                Pair this Display
-              </h1>
-              <p className="text-neutral-400 text-sm mt-2 leading-relaxed">
-                Scan the QR code with your phone or visit the link below to link this display to your miniKast account.
+                {/* QR Code Container with 4px border */}
+                <div className="bg-white border-4 border-[#008996] rounded-[20px] p-3.5 shadow-xl flex items-center justify-center size-[215px] sm:size-[225px]">
+                  {pairingCode ? (
+                    <QRCodeSVG
+                      value={pairUrl}
+                      size={190}
+                      level="H"
+                      includeMargin={false}
+                    />
+                  ) : (
+                    <div className="size-[190px] flex items-center justify-center">
+                      <div className="size-8 rounded-full border-2 border-[#008996] border-t-transparent animate-spin" />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Countdown Refresh Text */}
+              <p className="mt-3 text-sm sm:text-base font-normal text-[#547a7c] text-center">
+                Refreshes in {minutes}:{seconds}
               </p>
             </div>
 
-            {/* Pairing Code Big Box */}
-            <div className="bg-neutral-900/90 border border-neutral-800 rounded-2xl p-5 space-y-2.5">
-              <div className="flex items-center justify-between text-xs text-neutral-400 font-medium">
-                <span>Pairing Code</span>
-                <span className="font-mono text-neutral-400">
-                  Refreshes in {minutes}:{seconds}
+            {/* Right Column: Setup Instructions & Unified Code Card */}
+            <div className="flex flex-col items-start gap-6 max-w-sm sm:max-w-md w-full">
+              <div className="space-y-2">
+                <p className="text-base font-bold text-[#547a7c]">
+                  Screen Setup
+                </p>
+                <h1 className="text-3xl sm:text-4xl font-bold text-[#0d1f21] tracking-tight">
+                  Pair this Display
+                </h1>
+                <p className="text-base font-normal text-[#547a7c] leading-relaxed">
+                  Scan the QR code with your phone or visit the link below to link this display to your miniKast account.
+                </p>
+              </div>
+
+              {/* Pairing Code Card */}
+              <div className="w-full bg-white border border-[#b7eaed] rounded-[16px] px-4 py-2.5 flex items-center justify-between shadow-2xs">
+                <span className="text-base font-normal text-[#547a7c]">
+                  Pairing Code
+                </span>
+                <span className="text-xl sm:text-2xl font-bold text-[#008996] font-mono tracking-wide">
+                  {pairingCode ? pairingCode.replace("-", " -") : "···· - ····"}
                 </span>
               </div>
-              <div className="flex items-center gap-0 flex-wrap">
-                {pairingCode.split("").map((char, idx) => (
-                  <span
-                    key={idx}
-                    className={`h-14 min-w-10 px-2.5 bg-neutral-950 border ${char === "-" ? "border-transparent bg-transparent text-neutral-600 text-xl" : "border-neutral-800 text-emerald-400 text-2xl font-bold shadow-inner"
-                      } rounded-xl flex items-center justify-center font-mono`}
-                  >
-                    {char}
-                  </span>
-                ))}
-              </div>
-            </div>
 
-            {/* Manual Link Fallback */}
-            <div className="bg-white/5 border border-white/10 rounded-xl p-4 text-xs text-neutral-300 space-y-1">
-              <span className="text-neutral-500 uppercase tracking-wider font-semibold text-[10px]">
-                Manual Link
-              </span>
-              <p className="font-mono text-neutral-200 break-all">
-                {appUrl}/pair?code={pairingCode}
+              {/* Manual Link Fallback */}
+              <p className="text-xs text-[#547a7c] font-mono">
+                Manual link: <span className="text-[#0d1f21] underline">{appUrl}/pair?code={pairingCode}</span>
               </p>
             </div>
           </div>
         </main>
 
-        {/* Footer info bar */}
-        <footer className="w-full text-center text-xs text-neutral-600 z-10 flex items-center justify-center gap-4">
-          <span>TV Mode Active</span>
-          <span>•</span>
-          <span>Auto-reconnecting on signal loss</span>
+        {/* Footer */}
+        <footer className="w-full text-center text-xs text-[#547a7c] py-4 z-10">
+          <span>TV Mode Active &bull; Auto-reconnecting on signal loss</span>
         </footer>
       </div>
     );

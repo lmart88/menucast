@@ -90,10 +90,17 @@ graph TD
 
 The POC establishes the end-to-end technical pipeline from Figma directly to physical TV hardware.
 
-#### FR-0.1 Screen Pairing
+#### FR-0.1 Screen Pairing & TV Pairing Screen (`/tv`)
 - Displays launch into `/tv` and generate an 8-character human-readable pairing code alongside a dynamic QR code (`/pair?code=<CODE>`).
 - Pairing completes in $< 30$ seconds over Supabase Realtime channel `pairing:<CODE>`.
 - TV automatically reports its physical resolution (`screen_width`, `screen_height`), aspect ratio (`16:9`, `9:16`), and orientation (`Landscape`/`Portrait`).
+- **Figma Design System Alignment (`node-id=1459-10382`)**:
+  - Light mint/cyan radial glow backdrop (`#f7fcfc` to `#b7eaed`) with subtle dot pattern grid.
+  - White QR code card framed with `4px solid #008996` border and `20px` border-radius.
+  - miniKast bird icon perched at top-left of the QR card at `33.52deg` tilt.
+  - "Screen Setup" / "Pair this Display" heading and floating white pairing code pill card (`border 1px solid #b7eaed`, `rounded-2xl`, bold `#008996` code).
+  - Countdown timer ("Refreshes in MM:SS") in `#547a7c`.
+  - Specification Reference: [`docs/spec-tv-pairing-ui-redesign.md`](file:///Users/battosai/Dev/menucast/docs/spec-tv-pairing-ui-redesign.md)
 
 #### FR-0.2 Direct Image Upload
 - REST API `/api/menu/upload` generates pre-signed upload URLs for Supabase Storage.
