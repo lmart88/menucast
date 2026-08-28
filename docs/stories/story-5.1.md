@@ -12,6 +12,7 @@
 * **Login Screen Node**: [`1456:9079`](https://www.figma.com/design/Em6ldktbhllCYZv9EUrR0b/miniKast?node-id=1456-9079) ("Login")
 * **Registration Screen Node**: [`1456:9252`](https://www.figma.com/design/Em6ldktbhllCYZv9EUrR0b/miniKast?node-id=1456-9252) ("Create Account")
 * **Forgot Password Screen Node**: [`1468:7574`](https://www.figma.com/design/Em6ldktbhllCYZv9EUrR0b/miniKast?node-id=1468-7574) ("Forgot Password")
+* **Password Reset Screen Node**: [`1468:8036`](https://www.figma.com/design/Em6ldktbhllCYZv9EUrR0b/miniKast?node-id=1468-8036) ("Password Reset")
 **Cross-References**: [`docs/prd.md`](file:///Users/battosai/Dev/menucast/docs/prd.md) | [`docs/epics.md`](file:///Users/battosai/Dev/menucast/docs/epics.md) | [`docs/spec-auth-ui-redesign.md`](file:///Users/battosai/Dev/menucast/docs/spec-auth-ui-redesign.md)  
 **Created Date**: 2026-08-28  
 
