@@ -109,6 +109,25 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
   const [tokenLoading, setTokenLoading] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  // Profile & Account Management State
+  const [currentDisplayName, setCurrentDisplayName] = useState(userName || "");
+  const [profileNameInput, setProfileNameInput] = useState(userName || "");
+  const [isSavingName, setIsSavingName] = useState(false);
+  const [nameSuccess, setNameSuccess] = useState(false);
+  const [nameError, setNameError] = useState("");
+
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
+  const [passwordError, setPasswordError] = useState("");
+
+  // Delete Account Confirmation State
+  const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
+  const [deleteConfirmInput, setDeleteConfirmInput] = useState("");
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [deleteAccountError, setDeleteAccountError] = useState("");
+
   // Deletion state
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -118,9 +137,13 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
 
   // Screen Detail & Upload Modal
   const [activeScreen, setActiveScreen] = useState<TV | null>(null);
+  const [stagedImageUrl, setStagedImageUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgressText, setUploadProgressText] = useState("");
   const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [publishSuccess, setPublishSuccess] = useState(false);
+  const [publishError, setPublishError] = useState("");
   const [isClearingImage, setIsClearingImage] = useState(false);
   const [confirmClearImage, setConfirmClearImage] = useState(false);
   const [dragOver, setDragOver] = useState(false);
@@ -228,6 +251,104 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
     setTimeout(() => setCopied(false), 2000);
   }
 
+  async function handleSaveProfileName(e: React.FormEvent) {
+    e.preventDefault();
+    setNameError("");
+    setNameSuccess(false);
+
+    if (!profileNameInput.trim()) {
+      setNameError("Display name cannot be empty.");
+      return;
+    }
+
+    setIsSavingName(true);
+    try {
+      const res = await fetch("/api/auth/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: profileNameInput.trim() }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setNameSuccess(true);
+        setCurrentDisplayName(data.user?.name || profileNameInput.trim());
+        setTimeout(() => setNameSuccess(false), 3500);
+      } else {
+        setNameError(data.error || "Failed to update display name.");
+      }
+    } catch {
+      setNameError("Network error while updating display name.");
+    } finally {
+      setIsSavingName(false);
+    }
+  }
+
+  async function handleUpdatePassword(e: React.FormEvent) {
+    e.preventDefault();
+    setPasswordError("");
+    setPasswordSuccess(false);
+
+    if (newPassword.length < 8) {
+      setPasswordError("Password must be at least 8 characters.");
+      return;
+    }
+
+    if (newPassword !== confirmNewPassword) {
+      setPasswordError("Passwords do not match.");
+      return;
+    }
+
+    setIsUpdatingPassword(true);
+    try {
+      const res = await fetch("/api/auth/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: newPassword }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setPasswordSuccess(true);
+        setNewPassword("");
+        setConfirmNewPassword("");
+        setTimeout(() => setPasswordSuccess(false), 3500);
+      } else {
+        setPasswordError(data.error || "Failed to update password.");
+      }
+    } catch {
+      setPasswordError("Network error while updating password.");
+    } finally {
+      setIsUpdatingPassword(false);
+    }
+  }
+
+  async function handleDeleteAccount() {
+    if (deleteConfirmInput !== "DELETE") {
+      setDeleteAccountError("Please type DELETE to confirm.");
+      return;
+    }
+
+    setIsDeletingAccount(true);
+    setDeleteAccountError("");
+    try {
+      const res = await fetch("/api/auth/account", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirmation: "DELETE" }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        // Sign out and redirect to home page with deleted query param
+        await signOut({ callbackUrl: "/login?deleted=true" });
+      } else {
+        setDeleteAccountError(data.error || "Failed to delete account.");
+        setIsDeletingAccount(false);
+      }
+    } catch {
+      setDeleteAccountError("Network error while deleting account.");
+      setIsDeletingAccount(false);
+    }
+  }
+
   async function deleteTv(tvId: string) {
     setDeletingId(tvId);
     try {
@@ -263,6 +384,7 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
     setIsUploading(true);
     setUploadProgressText("Requesting upload URL…");
     setUploadSuccess(false);
+    setPublishError("");
 
     try {
       const uploadRes = await fetch("/api/menu/upload", {
@@ -282,7 +404,7 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
 
       const { upload_url, public_url } = await uploadRes.json();
 
-      setUploadProgressText("Uploading image file…");
+      setUploadProgressText("Uploading image to storage…");
       const fileBytes = await file.arrayBuffer();
       const storagePutRes = await fetch(upload_url, {
         method: "PUT",
@@ -294,41 +416,9 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
         throw new Error(`Storage upload failed (HTTP ${storagePutRes.status})`);
       }
 
-      setUploadProgressText("Broadcasting to TV screen…");
-      const pushRes = await fetch("/api/menu/push", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          tv_id: tvId,
-          image_url: public_url,
-          menu_mode: "static",
-          menu_data: null,
-        }),
-      });
-
-      if (!pushRes.ok) {
-        const err = await pushRes.json().catch(() => ({}));
-        throw new Error(err.error || `Push broadcast failed (HTTP ${pushRes.status})`);
-      }
-
-      setTvs((prev) =>
-        prev.map((t) =>
-          t.id === tvId
-            ? { ...t, current_menu_url: public_url, menu_mode: "static", menu_data: null }
-            : t
-        )
-      );
-
-      if (activeScreen?.id === tvId) {
-        setActiveScreen((prev) =>
-          prev
-            ? { ...prev, current_menu_url: public_url, menu_mode: "static", menu_data: null }
-            : null
-        );
-      }
-
+      // Stage the image in local state for review instead of pushing immediately
+      setStagedImageUrl(public_url);
       setUploadSuccess(true);
-      setTimeout(() => setUploadSuccess(false), 3000);
     } catch (err: any) {
       console.error("Upload error:", err);
       alert(`Image upload failed: ${err.message}`);
@@ -339,6 +429,73 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
       if (cardFileInputRef.current) cardFileInputRef.current.value = "";
       setTargetUploadTvId(null);
     }
+  }
+
+  async function handlePublish(tvId: string) {
+    if (!tvId) return;
+    setPublishError("");
+
+    // If there is a staged image, publish it to the TV
+    if (stagedImageUrl) {
+      setIsPublishing(true);
+      try {
+        const pushRes = await fetch("/api/menu/push", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            tv_id: tvId,
+            image_url: stagedImageUrl,
+            menu_mode: "static",
+            menu_data: null,
+          }),
+        });
+
+        if (!pushRes.ok) {
+          const err = await pushRes.json().catch(() => ({}));
+          throw new Error(err.error || `Push broadcast failed (HTTP ${pushRes.status})`);
+        }
+
+        const newUrl = stagedImageUrl;
+        setTvs((prev) =>
+          prev.map((t) =>
+            t.id === tvId
+              ? { ...t, current_menu_url: newUrl, menu_mode: "static", menu_data: null }
+              : t
+          )
+        );
+
+        if (activeScreen?.id === tvId) {
+          setActiveScreen((prev) =>
+            prev
+              ? { ...prev, current_menu_url: newUrl, menu_mode: "static", menu_data: null }
+              : null
+          );
+        }
+
+        setStagedImageUrl(null);
+        setPublishSuccess(true);
+        setTimeout(() => {
+          setPublishSuccess(false);
+          setActiveScreen(null);
+          setConfirmClearImage(false);
+        }, 800);
+      } catch (err: any) {
+        console.error("Publish error:", err);
+        setPublishError(err.message || "Failed to publish menu to TV.");
+      } finally {
+        setIsPublishing(false);
+      }
+    } else {
+      // No new staged image, close modal
+      setActiveScreen(null);
+      setConfirmClearImage(false);
+    }
+  }
+
+  function handleDiscardStaged() {
+    setStagedImageUrl(null);
+    setUploadSuccess(false);
+    setPublishError("");
   }
 
   async function handleClearImage(tvId: string) {
@@ -526,8 +683,11 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
                   <div
                     onClick={() => {
                       setActiveScreen(tv);
+                      setStagedImageUrl(null);
                       setConfirmClearImage(false);
                       setUploadSuccess(false);
+                      setPublishSuccess(false);
+                      setPublishError("");
                     }}
                     className="relative w-full h-[182px] bg-[#f7fcfc] dark:bg-[#081517] border-b border-[var(--accent-soft)] flex items-center justify-center overflow-hidden cursor-pointer"
                   >
@@ -627,7 +787,7 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
                     </div>
 
                     {/* Action Bar */}
-                    <div className="pt-2 border-t border-[var(--line)] flex items-center gap-2">
+                    {/* <div className="pt-2 border-t border-[var(--line)] flex items-center gap-2">
                       <button
                         type="button"
                         onClick={() => {
@@ -651,7 +811,7 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
                       >
                         Upload Menu
                       </button>
-                    </div>
+                    </div> */}
                   </div>
                 </div>
               );
@@ -660,12 +820,13 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
         )}
       </section>
 
-      {/* Account & Token Modal */}
+      {/* Account Settings Modal */}
       {showAccountModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-[var(--surface)] border border-[var(--accent-soft)] rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-6 transition-colors duration-300 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b border-[var(--line)] pb-3">
-              <h2 className="text-lg font-bold text-[var(--foreground)]">Account Settings</h2>
+          <div className="bg-[var(--surface)] border border-[var(--accent-soft)] rounded-2xl max-w-lg w-full max-h-[90vh] flex flex-col shadow-2xl transition-colors duration-300 animate-in fade-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-[var(--line)] px-6 py-4">
+              <h2 className="text-lg font-bold text-[var(--foreground)]">Account & Profile Settings</h2>
               <button
                 type="button"
                 onClick={() => setShowAccountModal(false)}
@@ -675,17 +836,92 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
               </button>
             </div>
 
-            <div className="space-y-4 text-sm">
-              <div>
-                <span className="text-xs uppercase font-semibold text-[var(--muted)] tracking-wider">Signed in as</span>
-                <p className="font-semibold text-base text-[var(--foreground)]">{userName || "User"}</p>
+            {/* Modal Body (Scrollable) */}
+            <div className="p-6 overflow-y-auto space-y-6 text-sm">
+              {/* Profile Info & Display Name */}
+              <div className="space-y-3">
+                <span className="text-xs uppercase font-semibold text-[var(--muted)] tracking-wider">Profile Information</span>
+                <p className="text-xs text-[var(--muted)]">
+                  Signed in as: <strong className="text-[var(--foreground)]">{userName || "User"}</strong>
+                </p>
+
+                {nameSuccess && (
+                  <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-2.5 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                    ✓ Display name updated successfully.
+                  </div>
+                )}
+                {nameError && (
+                  <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-2.5 text-xs text-red-500 font-medium">
+                    {nameError}
+                  </div>
+                )}
+
+                <form onSubmit={handleSaveProfileName} className="flex gap-2">
+                  <input
+                    type="text"
+                    value={profileNameInput}
+                    onChange={(e) => setProfileNameInput(e.target.value)}
+                    placeholder="Display Name"
+                    className="flex-1 bg-[var(--surface-soft)] border border-[var(--accent-soft)] rounded-lg px-3 py-2 text-xs text-[var(--foreground)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+                  />
+                  <button
+                    type="submit"
+                    disabled={isSavingName || profileNameInput === currentDisplayName}
+                    className="bg-[var(--accent)] hover:brightness-105 text-white px-4 py-2 rounded-lg text-xs font-bold transition-all disabled:opacity-40 cursor-pointer"
+                  >
+                    {isSavingName ? "Saving…" : "Save Name"}
+                  </button>
+                </form>
+              </div>
+
+              {/* Change Password */}
+              <div className="space-y-3 pt-4 border-t border-[var(--line)]">
+                <span className="text-xs uppercase font-semibold text-[var(--muted)] tracking-wider">Change Password</span>
+                <p className="text-xs text-[var(--muted)]">
+                  Update your dashboard password (min. 8 characters).
+                </p>
+
+                {passwordSuccess && (
+                  <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-2.5 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                    ✓ Password updated successfully.
+                  </div>
+                )}
+                {passwordError && (
+                  <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-2.5 text-xs text-red-500 font-medium">
+                    {passwordError}
+                  </div>
+                )}
+
+                <form onSubmit={handleUpdatePassword} className="space-y-2">
+                  <input
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="New password (min. 8 chars)"
+                    className="w-full bg-[var(--surface-soft)] border border-[var(--accent-soft)] rounded-lg px-3 py-2 text-xs text-[var(--foreground)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+                  />
+                  <div className="flex gap-2">
+                    <input
+                      type="password"
+                      value={confirmNewPassword}
+                      onChange={(e) => setConfirmNewPassword(e.target.value)}
+                      placeholder="Confirm new password"
+                      className="flex-1 bg-[var(--surface-soft)] border border-[var(--accent-soft)] rounded-lg px-3 py-2 text-xs text-[var(--foreground)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+                    />
+                    <button
+                      type="submit"
+                      disabled={isUpdatingPassword || !newPassword || !confirmNewPassword}
+                      className="bg-[var(--accent)] hover:brightness-105 text-white px-4 py-2 rounded-lg text-xs font-bold transition-all disabled:opacity-40 cursor-pointer"
+                    >
+                      {isUpdatingPassword ? "Updating…" : "Update Password"}
+                    </button>
+                  </div>
+                </form>
               </div>
 
               {/* Figma Plugin API Token */}
-              <div className="space-y-2 pt-3 border-t border-[var(--line)]">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs uppercase font-semibold text-[var(--muted)] tracking-wider">Figma Plugin API Token</span>
-                </div>
+              <div className="space-y-2 pt-4 border-t border-[var(--line)]">
+                <span className="text-xs uppercase font-semibold text-[var(--muted)] tracking-wider">Figma Plugin API Token</span>
                 <p className="text-xs text-[var(--muted)]">
                   Use this token in the miniKast Figma plugin to connect your account and push designs directly.
                 </p>
@@ -717,15 +953,115 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
                   </button>
                 )}
               </div>
+
+              {/* Danger Zone: Account Deletion */}
+              <div className="pt-4 border-t border-[var(--line)]">
+                <div className="bg-red-500/10 border border-red-500/25 rounded-xl p-4 space-y-3">
+                  <div>
+                    <span className="text-xs uppercase font-bold text-red-600 dark:text-red-400 tracking-wider">Danger Zone</span>
+                    <h3 className="text-sm font-bold text-[var(--foreground)]">Permanently Delete Account</h3>
+                    <p className="text-xs text-[var(--muted)] mt-1">
+                      Permanently remove your profile, all connected TV displays, uploaded menu images, and API tokens. This action is irreversible.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDeleteConfirmInput("");
+                      setDeleteAccountError("");
+                      setShowDeleteAccountModal(true);
+                    }}
+                    className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                  >
+                    Delete Account
+                  </button>
+                </div>
+              </div>
             </div>
 
-            <div className="flex justify-end pt-2 border-t border-[var(--line)]">
+            {/* Modal Footer */}
+            <div className="flex justify-end px-6 py-4 border-t border-[var(--line)]">
               <button
                 type="button"
                 onClick={() => setShowAccountModal(false)}
                 className="bg-[#f27200] hover:bg-[#ff8000] text-white px-5 py-2 rounded-full text-xs font-bold transition-colors cursor-pointer"
               >
                 Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Account Confirmation Dialog */}
+      {showDeleteAccountModal && (
+        <div className="fixed inset-0 z-60 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[var(--surface)] border border-red-500/40 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-5 transition-colors duration-300 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center gap-3 text-red-600 dark:text-red-400">
+              <div className="w-10 h-10 rounded-full bg-red-500/15 flex items-center justify-center font-bold text-xl shrink-0">
+                ⚠
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-[var(--foreground)]">Delete Account Permanently?</h2>
+                <p className="text-xs text-[var(--muted)]">This action cannot be undone.</p>
+              </div>
+            </div>
+
+            <div className="space-y-3 text-xs text-[var(--muted)] bg-[var(--surface-soft)] p-3.5 rounded-xl border border-[var(--line)]">
+              <p>
+                Deleting your account will immediately:
+              </p>
+              <ul className="list-disc list-inside space-y-1 text-[var(--foreground)]">
+                <li>Unpair and remove all connected TV displays</li>
+                <li>Purge all uploaded menu assets and push history</li>
+                <li>Revoke all Figma integration API tokens</li>
+                <li>Destroy your authentication session</li>
+              </ul>
+            </div>
+
+            {deleteAccountError && (
+              <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-2.5 text-xs text-red-500 font-medium">
+                {deleteAccountError}
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <label htmlFor="delete-confirm-input" className="block text-xs font-medium text-[var(--foreground)]">
+                Type <strong className="text-red-600 dark:text-red-400">DELETE</strong> to confirm:
+              </label>
+              <input
+                id="delete-confirm-input"
+                type="text"
+                value={deleteConfirmInput}
+                onChange={(e) => {
+                  setDeleteConfirmInput(e.target.value);
+                  setDeleteAccountError("");
+                }}
+                placeholder="DELETE"
+                className="w-full bg-[var(--surface-soft)] border border-[var(--accent-soft)] rounded-lg px-3 py-2 text-xs font-mono text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-red-500"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-[var(--line)]">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowDeleteAccountModal(false);
+                  setDeleteConfirmInput("");
+                  setDeleteAccountError("");
+                }}
+                disabled={isDeletingAccount}
+                className="px-4 py-2 rounded-lg text-xs font-semibold text-[var(--foreground)] hover:bg-[var(--surface-soft)] border border-[var(--accent-soft)] transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteAccount}
+                disabled={deleteConfirmInput !== "DELETE" || isDeletingAccount}
+                className="bg-red-600 hover:bg-red-700 disabled:opacity-40 text-white px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
+              >
+                {isDeletingAccount ? "Deleting…" : "Permanently Delete"}
               </button>
             </div>
           </div>
@@ -778,13 +1114,28 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
 
             {/* Modal Body */}
             <div className="p-6 overflow-y-auto space-y-6 flex-1">
-              {/* Current Active Preview */}
+              {/* Current Active or Staged Preview */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs uppercase font-semibold tracking-wider text-[var(--muted)]">
-                    Currently Displaying
-                  </span>
-                  {currentModalTv.current_menu_url && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs uppercase font-semibold tracking-wider text-[var(--muted)]">
+                      {stagedImageUrl ? "New Staged Menu Preview" : "Currently Displaying"}
+                    </span>
+                    {stagedImageUrl && (
+                      <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-[#f27200] text-white shadow-2xs">
+                        Draft (Unpublished)
+                      </span>
+                    )}
+                  </div>
+                  {stagedImageUrl ? (
+                    <button
+                      type="button"
+                      onClick={handleDiscardStaged}
+                      className="text-xs text-red-500 hover:underline font-semibold cursor-pointer"
+                    >
+                      Discard Draft ✕
+                    </button>
+                  ) : currentModalTv.current_menu_url ? (
                     <a
                       href={currentModalTv.current_menu_url}
                       target="_blank"
@@ -793,11 +1144,22 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
                     >
                       Open Full Size ↗
                     </a>
-                  )}
+                  ) : null}
                 </div>
 
                 <div className="aspect-video bg-[var(--surface-soft)] border border-[var(--accent-soft)] rounded-xl overflow-hidden flex items-center justify-center relative">
-                  {currentModalTv.current_menu_url ? (
+                  {stagedImageUrl ? (
+                    <>
+                      <img
+                        src={stagedImageUrl}
+                        alt="Staged Menu Preview"
+                        className="w-full h-full object-contain"
+                      />
+                      <div className="absolute bottom-2 inset-x-2 bg-black/70 backdrop-blur-xs text-white text-[11px] font-medium py-1 px-2.5 rounded-lg text-center">
+                        Preview only — Click &quot;Publish&quot; below to update the TV screen.
+                      </div>
+                    </>
+                  ) : currentModalTv.current_menu_url ? (
                     <img
                       src={currentModalTv.current_menu_url}
                       alt="Active Menu"
@@ -811,11 +1173,11 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
                   )}
                 </div>
 
-                {/* Clear Image Option */}
-                {currentModalTv.current_menu_url && (
+                {/* Clear Image Option (Only shown when not previewing a staged draft and active menu exists) */}
+                {!stagedImageUrl && currentModalTv.current_menu_url && (
                   <div className="pt-2 flex items-center justify-between">
                     <p className="text-xs text-[var(--muted)]">
-                      Clear menu graphic from screen
+                      Clear active menu graphic from screen
                     </p>
                     {confirmClearImage ? (
                       <div className="flex items-center gap-2">
@@ -853,7 +1215,7 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
                 <div>
                   <h3 className="text-sm font-bold text-[var(--foreground)]">Upload New Menu</h3>
                   <p className="text-xs text-[var(--muted)] mt-0.5">
-                    Drag & drop or select an image file to push immediately to this display.
+                    Drag & drop or select an image file to stage before publishing to this display.
                   </p>
                 </div>
 
@@ -899,9 +1261,15 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
                   </p>
                   <p className="text-[11px] text-[var(--muted)]">PNG, JPG, WebP (up to 20MB)</p>
 
-                  {uploadSuccess && (
+                  {uploadSuccess && stagedImageUrl && (
                     <div className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 mt-1">
-                      ✓ Uploaded and pushed successfully!
+                      ✓ Image uploaded and staged! Click &quot;Publish&quot; below to update the TV screen.
+                    </div>
+                  )}
+
+                  {publishError && (
+                    <div className="text-xs font-semibold text-red-500 mt-1">
+                      {publishError}
                     </div>
                   )}
                 </div>
@@ -910,17 +1278,42 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
 
             {/* Modal Footer */}
             <div className="p-4 border-t border-[var(--line)] bg-[var(--surface)] flex items-center justify-between">
-              <span className="text-xs text-[var(--muted)]">Changes reflect immediately on TV.</span>
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveScreen(null);
-                  setConfirmClearImage(false);
-                }}
-                className="bg-[#f27200] hover:bg-[#ff8000] text-white font-bold px-5 py-1.5 rounded-full text-xs transition-colors cursor-pointer"
-              >
-                Done
-              </button>
+              <div>
+                {stagedImageUrl ? (
+                  <span className="text-xs text-[#f27200] font-semibold flex items-center gap-1.5">
+                    <span className="size-2 rounded-full bg-[#f27200] animate-pulse" />
+                    New menu staged & ready to publish
+                  </span>
+                ) : (
+                  <span className="text-xs text-[var(--muted)]">Active menu is currently live on TV.</span>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveScreen(null);
+                    setStagedImageUrl(null);
+                    setConfirmClearImage(false);
+                    setPublishError("");
+                  }}
+                  className="px-3.5 py-1.5 rounded-full text-xs font-semibold text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-soft)] transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={isPublishing || isUploading}
+                  onClick={() => handlePublish(currentModalTv.id)}
+                  className="bg-[#f27200] hover:bg-[#ff8000] text-white font-bold px-5 py-1.5 rounded-full text-xs transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-1.5 shadow-2xs"
+                >
+                  {isPublishing && (
+                    <span className="size-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  )}
+                  <span>{isPublishing ? "Publishing…" : publishSuccess ? "✓ Published!" : "Publish"}</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>

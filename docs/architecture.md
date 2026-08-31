@@ -442,6 +442,18 @@ CREATE POLICY "Users manage their group memberships" ON tv_group_memberships FOR
   { "success": true, "menu": { "id": "...", "pushed_at": "2026-08-20T12:00:00Z" } }
   ```
 
+#### `DELETE /api/auth/account`
+- **Auth**: Session Cookie
+- **Request**:
+  ```json
+  { "confirmation": "DELETE" }
+  ```
+- **Response**:
+  ```json
+  { "success": true, "message": "Account and all associated resources permanently deleted." }
+  ```
+- **Processing**: Calls Supabase Admin Auth API (`supabase.auth.admin.deleteUser`) which triggers Postgres `ON DELETE CASCADE` across `tvs`, `menus`, `api_tokens`, and `screen_groups`, purges user folder in `menus` storage bucket, and revokes NextAuth session cookie.
+
 ---
 
 ### 5.2 Realtime WebSocket Protocol

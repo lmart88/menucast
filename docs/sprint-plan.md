@@ -46,18 +46,20 @@
 
 | Story ID | Title | Points | Priority | Status | Dependencies |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| `STORY-4.1` | High-Converting Hero & Interactive Demo Section | 5 pts | P1 | ⚪ To Do | None |
-| `STORY-4.2` | Feature Comparison & Compatibility Showcase | 3 pts | P1 | ⚪ To Do | `STORY-4.1` |
+| `STORY-4.2` | Feature Comparison & Compatibility Showcase | 3 pts | P1 | ⚪ To Do | None |
 | `STORY-4.3` | Pricing Tiers & FAQ Section | 3 pts | P1 | ⚪ To Do | `STORY-4.2` |
 | [`STORY-5.1`](file:///Users/battosai/Dev/menucast/docs/stories/story-5.1.md) | Self-Serve Registration, Login & Forgot Password (Redesigned UI) | 5 pts | P1 | 🟢 **DONE** | None |
-| `STORY-5.2` | Password Reset & Profile Account Management | 3 pts | P1 | ⚪ To Do | `STORY-5.1` |
-| [`STORY-5.3`](file:///Users/battosai/Dev/menucast/docs/stories/story-5.3.md) | Dashboard Displays & Screen Management UI Redesign (`1468:7181`) | 5 pts | P1 | 🟢 **DONE** | `STORY-5.1` |
+| [`STORY-5.2`](file:///Users/battosai/Dev/menucast/docs/stories/story-5.2.md) | Password Reset, Profile & Account Deletion Management | 4 pts | P1 | 🟢 **DONE** | [`STORY-5.1`](file:///Users/battosai/Dev/menucast/docs/stories/story-5.1.md) |
+| [`STORY-5.3`](file:///Users/battosai/Dev/menucast/docs/stories/story-5.3.md) | Dashboard Displays & Screen Management UI Redesign (`1468:7181`) | 5 pts | P1 | 🟢 **DONE** | [`STORY-5.1`](file:///Users/battosai/Dev/menucast/docs/stories/story-5.1.md) |
 | [`STORY-1.3`](file:///Users/battosai/Dev/menucast/docs/stories/story-1.3.md) | TV Display Pairing Screen UI Redesign (`1459:10382`) | 3 pts | P1 | 🟢 **DONE** | None |
+| `STORY-1.4` | TV Display Paired Idle Screen UI Redesign (`1485:2350`) | 2 pts | P1 | 🟢 **DONE** | None |
+| `STORY-1.5` | Pair New TV Claim Page UI Redesign (`1459:10712`) | 2 pts | P1 | 🟢 **DONE** | None |
+| `STORY-3.5` | TV Display Floating Menubar Redesign (`1492:8284`) | 2 pts | P1 | 🟢 **DONE** | None |
 | [`STORY-3.4`](file:///Users/battosai/Dev/menucast/docs/stories/story-3.4.md) | PWA Install App Popup & Download Modal Redesign (`1470:9050`) | 2 pts | P1 | 🟢 **DONE** | None |
 
-*(Note: Social OAuth Login is deferred to Post-MVP in [`docs/ideas.md`](file:///Users/battosai/Dev/menucast/docs/ideas.md)).*
+*(Note: `STORY-4.1` (Interactive Hero Demo) and Social OAuth Login are deferred to Post-MVP in [`docs/ideas.md`](file:///Users/battosai/Dev/menucast/docs/ideas.md); homepage responsive hero is delivered via [`docs/spec-homepage-ui-redesign.md`](file:///Users/battosai/Dev/menucast/docs/spec-homepage-ui-redesign.md)).*
 
-**Sprint 2 Summary**: 8 Stories | **29 Story Points Total** | **15 / 29 pts Completed (52%)** | 4 To Do.
+**Sprint 2 Summary**: 10 Stories | **31 Story Points Total** | **25 / 31 pts Completed (81%)** | 2 To Do.
 
 ---
 

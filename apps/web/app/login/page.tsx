@@ -14,6 +14,8 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") ?? "/dashboard";
+  const isResetSuccess = searchParams.get("reset") === "success";
+  const isDeletedSuccess = searchParams.get("deleted") === "true";
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -56,6 +58,24 @@ function LoginForm() {
             Welcome back to your dashboard
           </p>
         </div>
+
+        {isResetSuccess && (
+          <div
+            role="status"
+            className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg px-4 py-2.5 text-sm text-emerald-600 dark:text-emerald-400 font-medium"
+          >
+            Password updated successfully. Please sign in with your new password.
+          </div>
+        )}
+
+        {isDeletedSuccess && (
+          <div
+            role="status"
+            className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg px-4 py-2.5 text-sm text-emerald-600 dark:text-emerald-400 font-medium"
+          >
+            Your account and all associated data have been permanently deleted.
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (

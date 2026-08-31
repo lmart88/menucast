@@ -27,7 +27,13 @@ context:
    - Top preview area: Aspect-ratio-preserving preview slot (`16:9` / `9:16`). If no menu is pushed, displays "Awaiting menu" centered in `#547a7c`. When a menu exists, displays the live thumbnail.
    - Status badge: Pill badge in top-left with status dot and human-readable time elapsed (e.g. "13 days ago", "Just now", "Online").
    - Bottom metadata & actions: Screen title (bold Nunito), trash/delete icon button (`delete-02`), and screen specs row (resolution `1920x1080`, aspect ratio `16:9`, orientation `Portrait` / `Landscape`).
-5. **Brand Footer**: Left copyright ("© 2026 miniKast. All rights reserved.") and right support contact ("Contact: hello@miniKast.com").
+5. **Screen Detail / Management Modal & Staged Publishing**:
+   - Aspect-ratio-preserving preview of active TV menu.
+   - Screen name editor with inline save.
+   - Drag & drop or click-to-select image upload area.
+   - **Staged Preview**: Uploading a new image uploads to storage and displays a draft preview without pushing live to the TV.
+   - **"Publish" Action (`#f27200` / `#ff8000`)**: Explicitly pushes the staged design to the physical TV screen in real-time via `POST /api/menu/push`.
+6. **Brand Footer**: Left copyright ("© 2026 miniKast. All rights reserved.") and right support contact ("Contact: hello@miniKast.com").
 
 ## Boundaries & Constraints
 
@@ -43,7 +49,7 @@ context:
 **Never:**
 - Remove existing backend integration endpoints (`/api/tv/list`, `/api/tv/delete`, `/api/token`, etc.).
 - Introduce unapproved third-party UI component libraries.
-- Break real-time push previews or screen status updates.
+- Push images live to the TV immediately upon file selection before the user clicks "Publish".
 
 ## I/O & Edge-Case Matrix
 
@@ -52,6 +58,8 @@ context:
 | **DASHBOARD_WITH_SCREENS** | User has 1+ paired displays | Renders grid of ScreenCards with live thumbnails (or "Awaiting menu" placeholder), status badge, screen title, specs, and delete button | Gracefully falls back if screen info is missing |
 | **DASHBOARD_EMPTY_STATE** | User has 0 paired displays | Clean empty state with illustration / message and "Pair New Screen" CTA directing to `/pair` | N/A |
 | **PAIR_NEW_SCREEN_CLICK** | User clicks "Pair New Screen" CTA | Opens pairing modal / workflow or navigates to `/pair` | N/A |
+| **IMAGE_UPLOAD_STAGED** | User selects/drops image in Screen Modal | Uploads file to Supabase Storage and renders staged draft preview with "Ready to publish" badge; physical TV remains unchanged | Shows error toast on upload failure |
+| **PUBLISH_BUTTON_CLICKED** | User clicks "Publish" button in modal footer | Calls `POST /api/menu/push`, updates `current_menu_url` in database, broadcasts to TV in real-time, and closes/confirms modal | Shows error message if broadcast fails |
 | **DELETE_SCREEN_CONFIRM** | User clicks trash icon on ScreenCard | Prompts confirmation modal / dialog; on confirm calls `DELETE /api/tv/delete` and optimistically removes card | Inline error toast if deletion fails |
 | **THEME_TOGGLE** | User clicks sun/moon icon in header | Toggles between light and dark theme seamlessly | Persists choice to `localStorage` / theme provider |
 | **SIGN_OUT** | User clicks "Sign Out" | Dispatches NextAuth `signOut()` and redirects to `/login` | N/A |
@@ -68,6 +76,7 @@ context:
 
 1. **Visual Fidelity**: Dashboard matches Figma node `1468:7181` across mobile, tablet, and desktop viewports.
 2. **Screen Cards**: Renders paired screens with correct preview thumbnail / placeholder, status pill, specs, and delete trigger.
-3. **Action Triggers**: "Pair New Screen", "Install App", "Account", and "Sign Out" buttons work as intended.
-4. **Deletion Flow**: Deleting a screen updates state seamlessly and notifies Supabase.
-5. **Presence & Realtime**: Display online/offline badges and menu thumbnails update in real-time.
+3. **Staged Upload & Publish**: Uploading an image stages it in preview; only clicking the **"Publish"** CTA updates the TV display and database.
+4. **Action Triggers**: "Pair New Screen", "Install App", "Account", and "Sign Out" buttons work as intended.
+5. **Deletion Flow**: Deleting a screen updates state seamlessly and notifies Supabase.
+6. **Presence & Realtime**: Display online/offline badges and menu thumbnails update in real-time.

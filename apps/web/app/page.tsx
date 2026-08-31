@@ -115,10 +115,10 @@ function DemoMenu() {
 }
 
 const platforms = [
-  { name: "Samsung", src: "/platform-samsung.svg", className: "w-[90px] dark:brightness-0 dark:invert" },
+  { name: "Samsung", src: "/platform-samsung.svg", className: "w-[102px] dark:brightness-0 dark:invert" },
   { name: "LG", src: "/platform-lg.svg", className: "w-[67px]" },
-  { name: "Android", src: "/platform-android.svg", className: "w-[50px]" },
-  { name: "Apple", src: "/platform-apple.svg", className: "w-[51px] dark:brightness-0 dark:invert" },
+  { name: "Android", src: "/platform-android.svg", className: "w-[48px]" },
+  { name: "Apple", src: "/platform-apple.svg", className: "w-[48px] dark:brightness-0 dark:invert" },
   { name: "Fire TV", src: "/platform-fire-tv.svg", className: "w-[66px]" },
 ];
 
@@ -163,7 +163,7 @@ export default function HomePage() {
         </Link>
         <nav className="flex items-center gap-4 sm:gap-5" aria-label="Main navigation">
           <button
-            className="w-10 h-10 p-2 text-[var(--foreground)] bg-transparent rounded-lg hover:bg-[var(--surface-soft)] transition-colors flex items-center justify-center cursor-pointer"
+            className="w-10 h-10 p-2 text-[var(--foreground)] flex items-center justify-center cursor-pointer"
             type="button"
             aria-label={`Switch to ${nextTheme} theme`}
             onClick={() => setTheme(nextTheme)}
@@ -172,7 +172,7 @@ export default function HomePage() {
           </button>
           <Link
             href="/login"
-            className="min-h-8 px-4.5 inline-flex items-center justify-center text-sm font-medium rounded-full bg-[var(--button)] text-[var(--button-text)] hover:-translate-y-0.5 hover:opacity-90 transition-all shadow-sm"
+            className="min-h-8 px-4.5 inline-flex items-center justify-center text-sm font-medium rounded-full bg-[var(--accent)] text-[var(--button-text)] hover:-translate-y-0.5 hover:opacity-90 transition-all shadow-sm"
           >
             Sign in
           </Link>
@@ -193,7 +193,7 @@ export default function HomePage() {
         </div>
 
         {/* Interactive Demo Showcase */}
-        <div className="mt-9 flex flex-col items-center gap-4 w-full max-w-[376px] mx-auto">
+        <div className="flex flex-col items-center gap-4 w-full max-w-[376px] mx-auto">
           <img
             className="mb-[-30px] self-start relative z-10 w-16 h-16"
             src="/logo-minikast.svg"
@@ -220,7 +220,7 @@ export default function HomePage() {
           {/* Primary CTA */}
           <Link
             href="/tv"
-            className="w-full sm:w-auto min-h-12 px-6 inline-flex items-center justify-center gap-3 bg-[var(--button)] text-[var(--button-text)] rounded-full text-base font-semibold hover:-translate-y-0.5 hover:opacity-90 transition-all shadow-md mt-1 cursor-pointer"
+            className="w-full sm:w-auto min-h-12 px-6 inline-flex items-center justify-center gap-3 bg-[var(--attention)] text-[var(--button-text)] rounded-full text-base font-semibold hover:-translate-y-0.5 hover:opacity-90 transition-all shadow-md mt-1 cursor-pointer"
           >
             Pair Your TV <ArrowIcon />
           </Link>

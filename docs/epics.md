@@ -12,15 +12,15 @@
 
 | Epic ID | Epic Name | Priority | Milestone | Status | Stories |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **EPIC-1** | Screen Pairing & Telemetry | P0 | POC | 🟢 Completed | 2 Stories |
+| **EPIC-1** | Screen Pairing & Telemetry | P0 | POC | 🟢 Completed | 4 Stories |
 | **EPIC-2** | Image Upload & Figma Plugin (Image Only) | P0 | POC | 🟢 Completed | 4 Stories |
-| **EPIC-3** | TV Display Engine (PWA & Android TV) | P0 | POC | 🟢 Completed | 3 Stories |
-| **EPIC-4** | Marketing Landing Page (`/`) | P1 | MVP | ⚪ Planned | 3 Stories |
+| **EPIC-3** | TV Display Engine (PWA & Android TV) | P0 | POC | 🟢 Completed | 4 Stories |
+| **EPIC-4** | Marketing Landing Page (`/`) | P1 | MVP | ⚪ Planned | 2 Stories |
 | **EPIC-5** | Self-Serve User Accounts & Auth | P1 | MVP | ⚪ Planned | 2 Stories |
 | **EPIC-6** | Extended TV OS Support (tvOS / Smart TV) | P1 | MVP | ⚪ Planned | 2 Stories |
 | **EPIC-7** | Stripe Subscriptions & Billing Gating | P1 | MVP | ⚪ Planned | 3 Stories |
 
-*(Note: Social OAuth Login, Video upload, History, Transitions, Schedule, Multi-screen Fleet Management, Synchronization, and Live Menu HTML/CSS Overlays are parked in [`docs/ideas.md`](file:///Users/battosai/Dev/menucast/docs/ideas.md)).*
+*(Note: Social OAuth Login, Video upload, History, Transitions, Schedule, Multi-screen Fleet Management, Synchronization, Interactive Hero Demo Widget, and Live Menu HTML/CSS Overlays are parked in [`docs/ideas.md`](file:///Users/battosai/Dev/menucast/docs/ideas.md)).*
 
 ---
 
@@ -41,6 +41,15 @@
 - [x] **Given** an unconfigured TV or visitor loading `/tv`, **When** the pairing state is active, **Then** it renders the updated design matching Figma node `1459:10382` with light mint radial atmosphere, high-contrast QR code container framed with `4px solid #008996`, tilted perched bird icon, and countdown refresh timer.
 - [x] **Given** the pairing screen, **When** displaying the code, **Then** it renders the floating pairing code card (`border 1px solid #b7eaed`, `rounded-2xl`) with "Pairing Code" label and bold `#008996` code.
 - [x] **Given** a user scanning the QR code or submitting the code, **When** the pairing event is received, **Then** the TV transitions smoothly to the paired/displaying state.
+
+#### STORY-1.4: TV Paired Idle Screen UI Redesign (`node-id=1485:2350`)
+- [x] **Given** a paired TV display on `/tv` awaiting its first pushed menu, **When** the idle state is active, **Then** it renders the updated design matching Figma node `1485:2350` with mint radial background, centered teal-bordered checkmark container (`131px` x `131px`, `border-4 border-[#008996]`), bold "TV Paired!" heading, "Next Step" instruction card, and live status indicator ("Listening for live updates...").
+- [x] **Given** a new menu pushed from Figma or Dashboard, **When** `menu:push` event is received, **Then** the TV transitions smoothly from the idle screen to the live menu graphic via double-buffered crossfade.
+
+#### STORY-1.5: Pair New TV Page UI Redesign (`node-id=1459:10712`)
+- [x] **Given** an authenticated user navigating to `/pair` (directly or via TV QR code `/pair?code=...`), **When** the page loads, **Then** it renders the updated layout matching Figma node `1459:10712` (mint radial gradient backdrop, miniKast logo, floating white card `border 1px solid #b7eaed`, "Pair New TV" title, "Confirm Code" pill card, TV name input, and brand orange "Pair TV" button).
+- [x] **Given** an unauthenticated visitor navigating to `/pair`, **When** the page checks session, **Then** it redirects to `/login?callbackUrl=...` preserving any query parameter pairing code.
+- [x] **Given** valid pairing submission, **When** clicking "Pair TV", **Then** `POST /api/tv/pair` executes, pairs the screen to the user's account, fires `tv:paired` over Supabase Realtime, and redirects to `/dashboard`.
 
 ---
 
@@ -79,14 +88,17 @@
 - [x] **Given** a user clicking "Install", **When** on Chromium/Android/Desktop, **Then** the native browser PWA installation handshake executes smoothly.
 - [x] **Given** a user clicking "Install App" in dashboard/tv headers or on iOS Safari, **When** native PWA prompt is unsupported, **Then** an updated branded modal instructions sheet is displayed.
 
+#### STORY-3.5: TV Display Floating Menubar Redesign (`node-id=1492:8284`)
+- [x] **Given** an active TV display running `/tv` with live menu playback, **When** pointer movement or screen tap is detected, **Then** the top floating menubar slides down matching Figma node `1492:8284` (`bg-[#091516]/80`, `border-[#304243]`, `rounded-[16px]`, `px-4 py-2.5`) showing "miniKast TV" with live dot, telemetry subtitle (`{tvName} • {orientation} • {aspectRatio} • {resolution}`), and white pill Fullscreen toggle.
+- [x] **Given** 3 seconds of idle without pointer interaction, **When** timer fires, **Then** the overlay menubar smoothly slides out and hides the cursor.
+
 ---
 
 ## 🚀 P1: Commercial MVP — Active Backlog
 
 ### EPIC-4: Marketing Landing Page (`/`)
 
-#### STORY-4.1: High-Converting Hero & Interactive Demo Section
-- [ ] **Given** a visitor navigating to `/`, **When** the landing page loads, **Then** it presents a punchy value proposition (*"Turn any TV into a live digital menu board directly from Figma in 30 seconds"*), an animated product walkthrough, and primary "Get Started Free" CTA.
+*(Note: `STORY-4.1` (Interactive Hero Demo) has been removed from scope and deferred to [`docs/ideas.md`](file:///Users/battosai/Dev/menucast/docs/ideas.md) — core responsive hero & representative menu demo delivered via [`docs/spec-homepage-ui-redesign.md`](file:///Users/battosai/Dev/menucast/docs/spec-homepage-ui-redesign.md)).*
 
 #### STORY-4.2: Feature Comparison & Compatibility Showcase
 - [ ] **Given** the landing page, **When** scrolling, **Then** it showcases a side-by-side comparison (MenuCast vs. Traditional USB/Clunky Signage CMS) and hardware compatibility pills ($25 Fire TV Stick, Chromecast, Smart TVs).
@@ -104,13 +116,17 @@
 - [ ] **Given** an existing user on `/login`, **When** entering email and password, **Then** credentials are authenticated via NextAuth credentials provider, session is created, and user is redirected to `/dashboard` (or `callbackUrl`).
 - [ ] **Given** an invalid password, unregistered email, or network failure, **When** submitting auth forms, **Then** inline contextual error messages are displayed with clear visual hierarchy.
 
-#### STORY-5.2: Password Reset & Profile Account Management
+#### STORY-5.2: Password Reset, Profile & Account Deletion Management
 - [ ] **Given** an existing user, **When** requesting password reset at `/forgot-password`, **Then** a secure one-time reset link is dispatched, allowing the user to reset their credentials securely.
 - [ ] **Given** an authenticated user on `/dashboard/settings` or account modal, **When** updating their profile, **Then** name/email/password changes are persisted securely.
+- [ ] **Given** an authenticated user accessing the Danger Zone in Account settings, **When** clicking "Delete Account", **Then** an explicit confirmation dialog appears warning that all paired screens, menus, and API tokens will be permanently erased.
+- [ ] **Given** the user confirms account deletion, **When** `DELETE /api/auth/account` executes, **Then** the user account and all cascaded relations (`tvs`, `menus`, `api_tokens`, `screen_groups`, Supabase Auth record) are purged from PostgreSQL and Storage, the active session is destroyed, and the user is redirected to `/` with an account deletion confirmation.
 
 #### STORY-5.3: Dashboard Displays & Screen Management UI Redesign (`node-id=1468:7181`)
 - [x] **Given** an authenticated user on `/dashboard`, **When** the page loads, **Then** it renders the updated design matching Figma node `1468:7181` with brand header (miniKast logo, Install App, Account, Sign Out, theme switch), light mint radial backdrop with dot pattern, and brand footer.
 - [x] **Given** a user with paired screens, **When** viewing the "Displays" section, **Then** screen cards are rendered with live thumbnail/placeholder, top-left status pill badge, screen title, delete icon button, and hardware specifications (`resolution`, `aspect ratio`, `orientation`).
+- [x] **Given** an authenticated user uploading a new image in the Screen Detail modal, **When** uploaded to storage, **Then** it renders a staged draft preview with a "Draft / Ready to publish" badge without updating the physical TV.
+- [x] **Given** a staged menu in the Screen Detail modal, **When** the user clicks the "Publish" button, **Then** `POST /api/menu/push` broadcasts the new menu to the physical TV screen in real-time, persists `current_menu_url` in PostgreSQL, and confirms publication.
 - [x] **Given** a user clicking "Pair New Screen", **When** clicked, **Then** the user is directed to the screen pairing workflow (`/pair`).
 - [x] **Given** a user clicking the delete icon on a screen card, **When** confirmed, **Then** `DELETE /api/tv/delete` executes and removes the screen from Postgres and realtime subscriptions.
 

@@ -412,6 +412,7 @@ export default function TvPage() {
   const [showControls, setShowControls] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [windowDimensions, setWindowDimensions] = useState({ width: 1920, height: 1080 });
+  const [screenMeta, setScreenMeta] = useState<ReturnType<typeof getScreenMetadata> | null>(null);
   const [origin, setOrigin] = useState<string>("");
   const [installPrompt, setInstallPrompt] = useState<{
     prompt: () => Promise<void>;
@@ -424,6 +425,7 @@ export default function TvPage() {
   useEffect(() => {
     if (typeof window !== "undefined") {
       setOrigin(window.location.origin);
+      setScreenMeta(getScreenMetadata());
     }
   }, []);
 
@@ -460,6 +462,7 @@ export default function TvPage() {
         width: window.innerWidth,
         height: window.innerHeight,
       });
+      setScreenMeta(getScreenMetadata());
     }
     handleResize();
     window.addEventListener("resize", handleResize);
@@ -1091,34 +1094,76 @@ export default function TvPage() {
     );
   }
 
-  // State 2: Paired screen awaiting first push
+  // State 2: Paired screen awaiting first push (Matching Figma node 1485:2350)
   if (state === "paired" && !menuUrl && (!menuData || menuMode === "static")) {
     return (
-      <div className="min-h-screen bg-neutral-950 text-white flex flex-col items-center justify-center p-8 select-none">
-        <div className="max-w-md w-full text-center space-y-6 animate-in fade-in zoom-in-95 duration-500">
-          <div className="size-20 mx-auto rounded-3xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center">
-            <svg className="size-10 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-            </svg>
+      <div className="home-shell min-h-screen w-screen flex flex-col justify-between select-none overflow-hidden relative bg-[var(--background)] text-[var(--foreground)] transition-colors duration-300">
+        <div className="home-noise" aria-hidden="true" />
+
+        {/* Top Header Controls */}
+        <header className="w-full flex items-center justify-between px-6 py-4 z-20">
+          <div className="flex items-center gap-2">
+            <img src="/menucast-logo.svg" alt="miniKast logo" className="h-6 w-auto" />
           </div>
 
-          <div className="space-y-2">
-            <h1 className="text-3xl font-bold tracking-tight">TV Paired!</h1>
-            <p className="text-lg text-emerald-400 font-medium">{tvName}</p>
+          <div className="flex items-center gap-2 text-xs text-[#547a7c]">
+            <button
+              onClick={toggleFullscreen}
+              className="px-3 py-1.5 rounded-lg bg-white/80 hover:bg-white border border-[#b7eaed] text-[#0d1f21] transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
+            >
+              <kbd className="px-1.5 py-0.5 bg-[#f7fcfc] border border-[#b7eaed] rounded text-[10px] font-mono text-[#547a7c]">F</kbd>
+              <span>{isFullscreen ? "Exit Fullscreen" : "Fullscreen"}</span>
+            </button>
           </div>
+        </header>
 
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-6 text-left space-y-3">
-            <p className="text-xs uppercase tracking-wider text-neutral-400 font-semibold">Next Step</p>
-            <p className="text-sm text-neutral-300 leading-relaxed">
-              Open the <strong>miniKast Figma Plugin</strong>, select your menu design frame, choose an export mode (Static, Hybrid, or Responsive), and click <span className="text-white font-semibold">&quot;Push Current Frame to TV&quot;</span>.
-            </p>
-          </div>
+        {/* Main Paired Card Content (Figma node 1485:2350) */}
+        <main className="flex-1 flex items-center justify-center p-6 z-10">
+          <div className="flex flex-col items-center gap-8 max-w-md w-full animate-in fade-in zoom-in-95 duration-500 text-center">
+            {/* Green Tick Success Container (Figma node 1485:2416) */}
+            <div className="bg-[#f7fcfc] border-4 border-[#008996] rounded-[24px] size-[131px] flex items-center justify-center shadow-lg">
+              <svg
+                viewBox="0 0 64 64"
+                fill="none"
+                className="w-16 h-16 text-[#00c04b]"
+                stroke="currentColor"
+                strokeWidth="6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M14 34L26 46L50 18" />
+              </svg>
+            </div>
 
-          <div className="flex items-center justify-center gap-2 text-xs text-neutral-500">
-            <span className="size-2 rounded-full bg-emerald-400 animate-ping" />
-            Listening for live updates from Figma…
+            {/* Heading & Next Step Card */}
+            <div className="flex flex-col items-center gap-4 w-full">
+              <h1 className="text-[32px] font-bold text-[#0d1f21] leading-tight tracking-tight">
+                TV Paired!
+              </h1>
+
+              {/* Next Step Card (w-311px, rounded-16px) */}
+              <div className="w-[311px] max-w-full bg-white border border-[#b7eaed] rounded-[16px] p-4 flex flex-col gap-2 shadow-2xs text-center">
+                <span className="text-base font-bold text-[#008996]">
+                  Next Step
+                </span>
+                <p className="text-base font-normal text-[#547a7c] leading-5">
+                  Open the miniKast dashboard, upload your design, and publish it!
+                </p>
+              </div>
+
+              {/* Live Updates Listener */}
+              <div className="flex items-center justify-center gap-2 text-base text-[#547a7c] py-2">
+                <span className="size-2 rounded-full bg-[#00c04b] animate-ping shrink-0" />
+                <span>Listening for live updates...</span>
+              </div>
+            </div>
           </div>
-        </div>
+        </main>
+
+        {/* Footer */}
+        <footer className="w-full text-center text-xs text-[#547a7c] py-4 z-10">
+          <span>TV Mode Active &bull; {tvName} &bull; Auto-reconnecting on signal loss</span>
+        </footer>
       </div>
     );
   }
@@ -1134,59 +1179,67 @@ export default function TvPage() {
       onMouseMove={triggerControls}
       onClick={triggerControls}
     >
-      {/* Floating Control Menu Bar */}
+      {/* Floating Control Menu Bar (Figma node 1492:8284) */}
       <div
-        className={`fixed top-6 inset-x-0 z-50 flex justify-center px-4 pointer-events-none transition-all duration-500 ease-out ${showControls ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-6 pointer-events-none"
-          }`}
+        className={`fixed top-6 inset-x-0 z-50 flex justify-center px-4 pointer-events-none transition-all duration-500 ease-out ${
+          showControls ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-6 pointer-events-none"
+        }`}
       >
-        <div className="pointer-events-auto flex items-center justify-between gap-4 md:gap-8 bg-neutral-900/85 backdrop-blur-xl border border-white/15 shadow-2xl px-5 py-3 rounded-2xl max-w-lg w-full text-white">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="size-8 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center shrink-0">
-              <span className="size-2 rounded-full bg-emerald-400 animate-pulse" />
+        <div className="pointer-events-auto flex items-center justify-between gap-4 bg-[rgba(9,21,22,0.85)] backdrop-blur-md border border-[#304243] shadow-2xl px-4 py-2.5 rounded-[16px] max-w-lg w-full text-white select-none">
+          {/* Left Info: Title & Live Dot + Metadata Subtitle */}
+          <div className="flex flex-col gap-0.5 min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="text-[14px] font-bold text-white font-['Nunito'] leading-tight">
+                miniKast TV
+              </span>
+              <span className="size-[6px] rounded-full bg-[#00c04b] animate-pulse inline-block shrink-0" />
             </div>
-            <div className="min-w-0">
-              <p className="text-[11px] font-semibold text-neutral-400 uppercase tracking-widest leading-tight">
-                miniKast TV &bull;{" "}
-                <span className="text-emerald-400">
-                  {menuMode === "hybrid" ? "Hybrid Overlay" : menuMode === "responsive" ? "Responsive Flexbox" : "Static Image"}
-                </span>
-              </p>
-              <h2 className="text-sm font-bold text-white truncate leading-tight mt-0.5">
-                {tvName}
-              </h2>
+            <div className="flex items-center gap-1.5 text-[12px] font-normal text-[#b7eaed] font-['Nunito'] truncate leading-tight">
+              <span className="truncate">{tvName || "My TV"}</span>
+              <span>•</span>
+              <span>{screenMeta?.orientation || (windowDimensions.width >= windowDimensions.height ? "Landscape" : "Portrait")}</span>
+              <span>•</span>
+              <span>{screenMeta?.aspect_ratio || "16:9"}</span>
+              <span>•</span>
+              <span>
+                {screenMeta
+                  ? `${screenMeta.screen_width}x${screenMeta.screen_height}`
+                  : `${windowDimensions.width}x${windowDimensions.height}`}
+              </span>
             </div>
           </div>
 
+          {/* Right Action: Fullscreen Pill Button */}
           <div className="flex items-center gap-2 shrink-0">
             {installPrompt && (
               <button
                 type="button"
                 onClick={handleInstallApp}
                 title="Install TV Display App on this Device"
-                className="flex items-center gap-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 px-3 py-2 rounded-xl text-xs font-semibold tracking-wide transition-colors cursor-pointer"
+                className="flex items-center gap-1.5 bg-[#008996]/20 hover:bg-[#008996]/30 text-[#b7eaed] border border-[#008996]/40 px-3 py-1 rounded-full text-xs font-semibold tracking-wide transition-colors cursor-pointer"
               >
                 <svg className="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                 </svg>
-                <span>Install TV App</span>
+                <span className="hidden sm:inline">Install App</span>
               </button>
             )}
             <button
               type="button"
               onClick={toggleFullscreen}
               title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
-              className="flex items-center gap-2 bg-white/10 hover:bg-white/20 active:bg-white/25 text-white px-3.5 py-2 rounded-xl text-xs font-semibold tracking-wide transition-colors border border-white/10 cursor-pointer"
+              className="flex items-center gap-1.5 border border-white/80 hover:border-white hover:bg-white/10 text-white px-3.5 py-1 rounded-full text-xs font-bold font-['Nunito'] tracking-wide transition-colors cursor-pointer"
             >
               {isFullscreen ? (
                 <>
-                  <svg className="size-4 text-neutral-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <svg className="size-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 9L4 4m0 0h4m-4 0v4m6 6l5 5m0 0h-4m4 0v-4m-11 5l5-5m-5 5v-4m0 4h4m11-11l-5 5m5-5v4m0-4h-4" />
                   </svg>
                   <span>Exit</span>
                 </>
               ) : (
                 <>
-                  <svg className="size-4 text-neutral-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <svg className="size-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 4h-4m4 0l-5-5" />
                   </svg>
                   <span>Fullscreen</span>

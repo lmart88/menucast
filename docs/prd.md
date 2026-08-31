@@ -94,18 +94,35 @@ The POC establishes the end-to-end technical pipeline from Figma directly to phy
 - Displays launch into `/tv` and generate an 8-character human-readable pairing code alongside a dynamic QR code (`/pair?code=<CODE>`).
 - Pairing completes in $< 30$ seconds over Supabase Realtime channel `pairing:<CODE>`.
 - TV automatically reports its physical resolution (`screen_width`, `screen_height`), aspect ratio (`16:9`, `9:16`), and orientation (`Landscape`/`Portrait`).
-- **Figma Design System Alignment (`node-id=1459-10382`)**:
-  - Light mint/cyan radial glow backdrop (`#f7fcfc` to `#b7eaed`) with subtle dot pattern grid.
-  - White QR code card framed with `4px solid #008996` border and `20px` border-radius.
-  - miniKast bird icon perched at top-left of the QR card at `33.52deg` tilt.
-  - "Screen Setup" / "Pair this Display" heading and floating white pairing code pill card (`border 1px solid #b7eaed`, `rounded-2xl`, bold `#008996` code).
-  - Countdown timer ("Refreshes in MM:SS") in `#547a7c`.
-  - Specification Reference: [`docs/spec-tv-pairing-ui-redesign.md`](file:///Users/battosai/Dev/menucast/docs/spec-tv-pairing-ui-redesign.md)
+- **Figma Design System Alignment**:
+  - **TV Display Pairing Screen (`node-id=1459:10382`)**:
+    - Light mint/cyan radial glow backdrop (`#f7fcfc` to `#b7eaed`) with subtle dot pattern grid.
+    - White QR code card framed with `4px solid #008996` border and `20px` border-radius.
+    - miniKast bird icon perched at top-left of the QR card at `33.52deg` tilt.
+    - "Screen Setup" / "Pair this Display" heading and floating white pairing code pill card (`border 1px solid #b7eaed`, `rounded-2xl`, bold `#008996` code).
+    - Countdown timer ("Refreshes in MM:SS") in `#547a7c`.
+    - Specification Reference: [`docs/spec-tv-pairing-ui-redesign.md`](file:///Users/battosai/Dev/menucast/docs/spec-tv-pairing-ui-redesign.md)
+  - **TV Paired Idle Screen (`node-id=1485:2350`)**:
+    - Branded mint radial backdrop with subtle dot pattern.
+    - Centered `131px` x `131px` rounded container (`rounded-[24px]`, `border-4 border-[#008996]`, `bg-[#f7fcfc]`) with vibrant green checkmark icon.
+    - Bold "TV Paired!" heading (`32px`, `#0d1f21`, `Nunito`).
+    - Floating "Next Step" instructions card (`w-[311px]`, `bg-white`, `border 1px solid #b7eaed`, `rounded-[16px]`, `p-4`) prompting user to upload design from dashboard or Figma.
+    - Pulsing green live indicator with "Listening for live updates...".
+    - Specification Reference: [`docs/spec-tv-paired-idle-ui-redesign.md`](file:///Users/battosai/Dev/menucast/docs/spec-tv-paired-idle-ui-redesign.md)
+  - **Pair New TV Claim Screen (`/pair`, `node-id=1459:10712`)**:
+    - Centered floating card layout on mint radial gradient backdrop with miniKast logo.
+    - "Pair New TV" heading (`20px bold`) and subtitle: *"Link a new TV to your account to push and manage live menu designs remotely."*
+    - "Confirm Code" pill card (`border 1px solid #b7eaed`, `rounded-2xl`, bold `#008996` code) with URL parameter pre-fill support.
+    - TV Name input field (`border 1px solid #b7eaed`, `rounded-lg`).
+    - Brand orange "Pair TV" CTA button (`bg-[#f27200] hover:bg-[#ff8000]`).
+    - Specification Reference: [`docs/spec-pair-screen-ui-redesign.md`](file:///Users/battosai/Dev/menucast/docs/spec-pair-screen-ui-redesign.md)
 
-#### FR-0.2 Direct Image Upload
+#### FR-0.2 Direct Image Upload & Staged Menu Publishing
 - REST API `/api/menu/upload` generates pre-signed upload URLs for Supabase Storage.
 - Direct binary HTTP PUT uploads bypass serverless payload limits.
-- `/api/menu/push` broadcasts `menu:push` to target `tv:<TV_ID>` channel.
+- **Two-Phase Upload & Publish Lifecycle**:
+  - Image upload saves the asset into Supabase Storage and stages it as a draft preview in the screen management interface without immediately updating the live TV display.
+  - Pushing the menu live is triggered explicitly when the user clicks **"Publish"**, which calls `/api/menu/push` to update the active menu in PostgreSQL and broadcast `menu:push` to target `tv:<TV_ID>` channels over Supabase Realtime.
 
 #### FR-0.3 Figma Plugin (Image Only)
 - Secure API Token authentication stored in `figma.clientStorage`.
@@ -124,6 +141,13 @@ The POC establishes the end-to-end technical pipeline from Figma directly to phy
   - High-contrast teal `#008996` pill action button with download icon.
   - Guided iOS Safari "Add to Home Screen" visual walkthrough.
   - Specification Reference: [`docs/spec-install-app-popup.md`](file:///Users/battosai/Dev/menucast/docs/spec-install-app-popup.md)
+- **Floating Top Menubar Overlay (`node-id=1492:8284`)**:
+  - Translucent dark glassmorphism card (`bg-[#091516]/80 backdrop-blur-md`, `border border-[#304243]`, `rounded-[16px]`, `px-4 py-2.5`, `max-w-lg`).
+  - Auto-reveals when mouse moves or screen is tapped; auto-hides after 3 seconds of idle.
+  - Displays "miniKast TV" with pulsing live green indicator dot.
+  - Telemetry subtitle row: `{tvName} • {orientation} • {aspectRatio} • {resolution}` in `#b7eaed`.
+  - Rounded white pill button for toggling fullscreen mode.
+  - Specification Reference: [`docs/spec-tv-menubar-ui-redesign.md`](file:///Users/battosai/Dev/menucast/docs/spec-tv-menubar-ui-redesign.md)
 
 #### FR-0.5 Native Android TV & Fire TV Kiosk Container
 - Dedicated Kotlin app (`apps/tv-android`) launching on device boot (`RECEIVE_BOOT_COMPLETED`).
@@ -136,14 +160,13 @@ The POC establishes the end-to-end technical pipeline from Figma directly to phy
 
 The MVP delivers a commercial, self-serve SaaS product ready for public customer onboarding and monetization.
 
-#### FR-1.1 High-Converting Marketing Landing Page (`/`)
-- Modern, responsive landing page showcasing the Figma $\rightarrow$ TV real-time workflow.
-- Interactive hero demonstration / video walkthrough.
+#### FR-1.1 Responsive Marketing Landing Page (`/`)
+- Modern, responsive landing page showcasing the Figma $\rightarrow$ TV real-time workflow with representative 16:9 menu display and theme toggle (delivered via [`docs/spec-homepage-ui-redesign.md`](file:///Users/battosai/Dev/menucast/docs/spec-homepage-ui-redesign.md)).
 - Feature comparison grid against traditional signage systems.
 - Pricing tiers with clear Call-to-Action (CTA) buttons directing to registration.
 - FAQ section addressing hardware compatibility (Fire TV, Chromecast, Smart TVs).
 
-#### FR-1.2 Self-Serve User Accounts & Authentication
+#### FR-1.2 Self-Serve User Accounts, Profile & Account Deletion
 - **Authentication Scope (MVP)**: Streamlined Email & Password authentication for registration (`/register`) and sign-in (`/login`).
 - **UI & Design System Alignment**:
   - Full-screen centered card layout on mint radial gradient backdrop (`#f7fcfc` / `#b7eaed` radial tint).
@@ -153,7 +176,12 @@ The MVP delivers a commercial, self-serve SaaS product ready for public customer
   - Vibrant brand orange primary CTA (`Create Account` / `Sign In`) and subtle teal navigation links (`Back to Login` / `Create an account`).
 - **Password Reset & Session Management**:
   - Secure session token persistence.
-  - Password reset / recovery request handling (`/forgot-password`).
+  - Password reset / recovery request handling (`/forgot-password` and `/reset-password`).
+- **Account Management & Permanent Deletion (GDPR / Privacy Compliance)**:
+  - Profile update controls (name, email, password update) in Account settings / modal.
+  - Self-serve **Account Deletion** in a dedicated Danger Zone with explicit confirmation safeguards.
+  - Automated cascade data purge across all user resources: paired screens (`tvs`), push history (`menus`), uploaded graphics in Supabase Storage, Figma API tokens (`api_tokens`), screen groups (`screen_groups`), and Supabase Auth identity.
+  - Immediate session termination with redirect to `/` and confirmation notice.
 - **Data Isolation**: Multi-tenant isolation enforced with PostgreSQL Row-Level Security (RLS).
 
 #### FR-1.3 Extended TV OS Support
@@ -178,6 +206,9 @@ The MVP delivers a commercial, self-serve SaaS product ready for public customer
     - Aspect-ratio-preserving preview slot (`16:9` / `9:16`) with "Awaiting menu" placeholder or live pushed menu thumbnail.
     - Top-left status pill badge with indicator dot and elapsed time / status.
     - Bottom metadata row with screen name, trash icon button for deletion, and hardware specs (`resolution`, `aspect ratio`, `orientation`).
+  - **Staged Upload & Publish Controls**:
+    - Uploading or dropping a new image into the screen detail modal uploads the asset to storage and renders a staged draft preview with a "Draft / Ready to publish" badge.
+    - The TV display remains unaffected until the user explicitly clicks the brand orange **"Publish"** CTA (`#f27200`), triggering `POST /api/menu/push` and immediate real-time update on the physical TV screen.
   - Standardized footer with copyright notice and hello@miniKast.com contact link.
 - **Specification Reference**: [`docs/spec-dashboard-ui-redesign.md`](file:///Users/battosai/Dev/menucast/docs/spec-dashboard-ui-redesign.md)
 
@@ -189,6 +220,7 @@ The following items are deferred to [`docs/ideas.md`](file:///Users/battosai/Dev
 
 | Feature | Category | Reason for Deferral |
 | :--- | :--- | :--- |
+| **Interactive Hero Demo Widget & Video Walkthrough** | Landing Page | Static representative 16:9 menu demo already delivers core value proposition; complex interactive simulation adds unnecessary weight for MVP. |
 | **Social OAuth Login (Google / GitHub)** | Auth / Accounts | Email & Password delivers complete self-serve access without third-party OAuth app setup overhead for MVP. |
 | **Video Upload** | Player / Storage | High bandwidth/storage costs; static 2x graphics satisfy 90% of core restaurant use cases. |
 | **Push History & Rollback** | Versioning | Nice-to-have; single active menu graphic is sufficient for MVP. |
