@@ -205,7 +205,21 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
   useEffect(() => {
     fetchTvs();
     const pollInterval = setInterval(fetchTvs, 8000);
-    return () => clearInterval(pollInterval);
+
+    const handleFocusOrVisible = () => {
+      if (document.visibilityState === "visible") {
+        fetchTvs();
+      }
+    };
+
+    window.addEventListener("focus", handleFocusOrVisible);
+    document.addEventListener("visibilitychange", handleFocusOrVisible);
+
+    return () => {
+      clearInterval(pollInterval);
+      window.removeEventListener("focus", handleFocusOrVisible);
+      document.removeEventListener("visibilitychange", handleFocusOrVisible);
+    };
   }, [fetchTvs]);
 
   // Listen for beforeinstallprompt

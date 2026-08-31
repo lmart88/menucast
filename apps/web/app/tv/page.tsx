@@ -68,15 +68,14 @@ interface MenuData {
 function getScreenMetadata() {
   if (typeof window === "undefined") return null;
 
-  const dpr = window.devicePixelRatio || 1;
-  const width = Math.round((window.screen?.width || window.innerWidth) * (dpr > 1 ? dpr : 1));
-  const height = Math.round((window.screen?.height || window.innerHeight) * (dpr > 1 ? dpr : 1));
-  const orientation = width >= height ? "Landscape" : "Portrait";
+  const width = window.screen?.width || window.innerWidth;
+  const height = window.screen?.height || window.innerHeight;
+  const orientation: "Landscape" | "Portrait" = width >= height ? "Landscape" : "Portrait";
 
   function gcd(a: number, b: number): number {
     return b === 0 ? a : gcd(b, a % b);
   }
-  const divisor = gcd(width, height);
+  const divisor = gcd(width, height) || 1;
   const ratioW = Math.round(width / divisor);
   const ratioH = Math.round(height / divisor);
 
@@ -764,21 +763,43 @@ export default function TvPage() {
     };
   }, [pairingCode, state]);
 
-  // Step 3: Screen metadata
+  // Step 3: Screen metadata (reports on pair, resize, and fullscreen change)
   useEffect(() => {
     if (!tvId) return;
 
-    const meta = getScreenMetadata();
-    if (!meta) return;
+    const reportScreen = () => {
+      const meta = getScreenMetadata();
+      if (!meta) return;
+      setScreenMeta(meta);
 
-    fetch("/api/tv/screen-info", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        tv_id: tvId,
-        ...meta,
-      }),
-    }).catch((err) => console.error("Error reporting screen info:", err));
+      fetch("/api/tv/screen-info", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tv_id: tvId,
+          ...meta,
+        }),
+      }).catch((err) => console.error("Error reporting screen info:", err));
+    };
+
+    // Report immediately
+    reportScreen();
+
+    // Listen to resize / fullscreen
+    let resizeTimer: NodeJS.Timeout | null = null;
+    const handleResize = () => {
+      if (resizeTimer) clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(reportScreen, 400);
+    };
+
+    window.addEventListener("resize", handleResize);
+    document.addEventListener("fullscreenchange", reportScreen);
+
+    return () => {
+      if (resizeTimer) clearTimeout(resizeTimer);
+      window.removeEventListener("resize", handleResize);
+      document.removeEventListener("fullscreenchange", reportScreen);
+    };
   }, [tvId]);
 
   // Step 3.5: Heartbeat telemetry (ping every 30s and immediately on visible/focus when tvId is active)
