@@ -115,11 +115,11 @@ function DemoMenu() {
 }
 
 const platforms = [
-  { name: "Samsung", src: "/platform-samsung.svg", className: "w-[102px] dark:brightness-0 dark:invert" },
-  { name: "LG", src: "/platform-lg.svg", className: "w-[67px]" },
-  { name: "Android", src: "/platform-android.svg", className: "w-[48px]" },
-  { name: "Apple", src: "/platform-apple.svg", className: "w-[48px] dark:brightness-0 dark:invert" },
-  { name: "Fire TV", src: "/platform-fire-tv.svg", className: "w-[66px]" },
+  { name: "Samsung", src: "/platform-samsung.svg", className: "w-[80px] h-auto dark:brightness-0 dark:invert" },
+  { name: "LG", src: "/platform-lg.svg", className: "w-[66px] h-auto" },
+  { name: "Android TV", src: "/platform-android-tv.svg", className: "w-[104px] h-auto dark:brightness-0 dark:invert" },
+  { name: "Apple TV", src: "/platform-apple-tv.svg", className: "w-[51px] h-auto dark:brightness-0 dark:invert" },
+  { name: "Fire TV", src: "/platform-fire-tv.svg", className: "w-[51px] h-auto" },
 ];
 
 export default function HomePage() {
