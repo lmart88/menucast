@@ -228,11 +228,10 @@ class MainActivity : AppCompatActivity() {
 
     private fun getServerUrl(): String {
         val saved = prefs.getString(KEY_SERVER_URL, null)
-        if (saved != null && (saved.contains("10.0.2.2") || saved.contains("192.168.4.117") || saved.isEmpty())) {
-            prefs.edit().remove(KEY_SERVER_URL).apply()
-            return getString(R.string.default_server_url)
+        if (!saved.isNullOrBlank()) {
+            return saved
         }
-        return saved ?: getString(R.string.default_server_url)
+        return getString(R.string.default_server_url)
     }
 
     private fun setServerUrl(newUrl: String) {

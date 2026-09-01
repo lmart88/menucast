@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
+
+
 const nextConfig: NextConfig = {
+  compress: false, // Prevents chunked encoding stream truncation on older WebViews
   allowedDevOrigins: ["192.168.4.117"],
   async headers() {
     return [

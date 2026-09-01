@@ -233,7 +233,7 @@ export default function HomePage() {
         aria-labelledby="platform-title"
       >
         <p id="platform-title" className="mb-3.5 text-sm font-bold tracking-wide">
-          Available on
+          Coming soon to
         </p>
         <div className="flex flex-wrap justify-center items-center gap-x-4.5 gap-y-2">
           {platforms.map((platform) => (
