@@ -4,7 +4,35 @@ import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
-import Image from "next/image";
+type Theme = "light" | "dark";
+
+function ThemeAwareLogo({
+  theme,
+  className = "h-8 w-[144px]",
+}: {
+  theme: Theme;
+  className?: string;
+}) {
+  const [logoSource, setLogoSource] = useState("");
+
+  useEffect(() => {
+    fetch("/menucast-logo.svg")
+      .then((response) => response.text())
+      .then(setLogoSource)
+      .catch(() => setLogoSource(""));
+  }, []);
+
+  const unionFill = theme === "dark" ? "#fff" : "#0d1f21";
+  const logoMarkup = logoSource.replace(/(<path id="Union"[^>]*fill=")[^"]+/, `$1${unionFill}`);
+
+  return (
+    <span
+      className={`inline-block ${className} [&_svg]:block [&_svg]:h-full [&_svg]:w-full`}
+      aria-hidden="true"
+      dangerouslySetInnerHTML={{ __html: logoMarkup }}
+    />
+  );
+}
 
 function PairForm() {
   const searchParams = useSearchParams();
@@ -12,11 +40,31 @@ function PairForm() {
   const { status } = useSession();
   const urlCode = searchParams.get("code") ?? "";
 
+  const [theme, setTheme] = useState<Theme>("light");
   const [pairingCode, setPairingCode] = useState(urlCode);
   const [tvName, setTvName] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+
+  // Sync theme
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem("menucast-theme");
+      if (stored === "dark") {
+        setTheme("dark");
+        document.documentElement.dataset.theme = "dark";
+      } else if (stored === "light") {
+        setTheme("light");
+        document.documentElement.dataset.theme = "light";
+      } else if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
+        setTheme("dark");
+        document.documentElement.dataset.theme = "dark";
+      }
+    } catch {
+      // localStorage not accessible
+    }
+  }, []);
 
   // Sync urlCode if changed
   useEffect(() => {
@@ -96,15 +144,8 @@ function PairForm() {
 
       <div className="flex flex-col items-center gap-4 w-full max-w-[320px] animate-in fade-in zoom-in-95 duration-400">
         {/* Centered Brand Logo (Figma node 1459:10831) */}
-        <Link href="/" className="inline-block transition-transform hover:scale-105">
-          <Image
-            src="/menucast-logo.svg"
-            alt="miniKast Logo"
-            width={146}
-            height={32}
-            className="h-8 w-auto"
-            priority
-          />
+        <Link href="/" className="inline-block transition-transform hover:scale-105" aria-label="miniKast Home">
+          <ThemeAwareLogo theme={theme} className="h-8 w-[144px]" />
         </Link>
 
         {/* Card Container (Figma node 1459:10832) */}
@@ -143,9 +184,10 @@ function PairForm() {
                   type="text"
                   value={pairingCode}
                   onChange={(e) => setPairingCode(e.target.value.toUpperCase())}
-                  className="w-full h-[40px] bg-[var(--surface)] border border-[var(--accent-soft)] rounded-lg px-4 py-2 text-[16px] font-mono font-bold text-[#008996] uppercase text-center focus:outline-none focus:ring-2 focus:ring-[#008996]/30"
-                  placeholder="e.g. BARK-2874"
+                  className="w-full h-[40px] bg-[var(--background)] border border-[var(--accent-soft)] rounded-lg px-4 py-2 text-[16px] font-mono font-bold text-[var(--accent)] uppercase text-center focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                  placeholder="Enter Code"
                   required
+                  disabled={!!urlCode}
                 />
               </div>
             )}

@@ -6,6 +6,43 @@ import { QRCodeSVG } from "qrcode.react";
 
 type TvState = "loading" | "pairing" | "paired" | "displaying";
 type MenuMode = "static" | "hybrid" | "responsive";
+type Theme = "light" | "dark";
+
+function SunIcon({ className = "w-5 h-5" }: { className?: string }) {
+  return <img aria-hidden="true" src="/theme-sun.svg" alt="" className={`${className} block`} />;
+}
+
+function MoonIcon({ className = "w-5 h-5" }: { className?: string }) {
+  return <img aria-hidden="true" src="/theme-moon.svg" alt="" className={`${className} block`} />;
+}
+
+function ThemeAwareLogo({
+  theme,
+  className = "h-6 w-[108px]",
+}: {
+  theme: Theme;
+  className?: string;
+}) {
+  const [logoSource, setLogoSource] = useState("");
+
+  useEffect(() => {
+    fetch("/menucast-logo.svg")
+      .then((response) => response.text())
+      .then(setLogoSource)
+      .catch(() => setLogoSource(""));
+  }, []);
+
+  const unionFill = theme === "dark" ? "#fff" : "#0d1f21";
+  const logoMarkup = logoSource.replace(/(<path id="Union"[^>]*fill=")[^"]+/, `$1${unionFill}`);
+
+  return (
+    <span
+      className={`inline-block ${className} [&_svg]:block [&_svg]:h-full [&_svg]:w-full`}
+      aria-hidden="true"
+      dangerouslySetInnerHTML={{ __html: logoMarkup }}
+    />
+  );
+}
 
 interface HybridElement {
   id: string;
@@ -398,6 +435,8 @@ function ResponsiveNodeView({
 // Main TV Page Component
 // ----------------------------------------------------
 export default function TvPage() {
+  const [theme, setTheme] = useState<Theme>("light");
+  const [isThemeHydrated, setIsThemeHydrated] = useState(false);
   const [state, setState] = useState<TvState>("loading");
   const [pairingCode, setPairingCode] = useState("");
   const [expiresAt, setExpiresAt] = useState<number>(0);
@@ -420,6 +459,36 @@ export default function TvPage() {
 
   const isInitializingRef = useRef(false);
   const hideControlsTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Synchronize theme with localStorage and document dataset
+  useEffect(() => {
+    setIsThemeHydrated(true);
+    try {
+      const stored = window.localStorage.getItem("menucast-theme");
+      if (stored === "dark") {
+        setTheme("dark");
+        document.documentElement.dataset.theme = "dark";
+      } else if (stored === "light") {
+        setTheme("light");
+        document.documentElement.dataset.theme = "light";
+      } else if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
+        setTheme("dark");
+        document.documentElement.dataset.theme = "dark";
+      }
+    } catch {
+      // localStorage not accessible
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isThemeHydrated) return;
+    document.documentElement.dataset.theme = theme;
+    try {
+      window.localStorage.setItem("menucast-theme", theme);
+    } catch {
+      // ignore
+    }
+  }, [theme, isThemeHydrated]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -554,7 +623,7 @@ export default function TvPage() {
     };
   }, [state, triggerControls]);
 
-  // TV remote & keyboard shortcuts (F for Fullscreen, R for Refresh Code)
+  // TV remote & keyboard shortcuts (F for Fullscreen, R for Refresh Code, T for Theme)
   useEffect(() => {
     const handleTvKey = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
@@ -566,6 +635,9 @@ export default function TvPage() {
           e.preventDefault();
           initTv(true);
         }
+      } else if (e.key === "t" || e.key === "T") {
+        e.preventDefault();
+        setTheme((prev) => (prev === "light" ? "dark" : "light"));
       }
     };
     window.addEventListener("keydown", handleTvKey);
@@ -1009,6 +1081,7 @@ export default function TvPage() {
 
   // State 1: Pairing Screen
   if (state === "pairing") {
+    const nextTheme = theme === "light" ? "dark" : "light";
     return (
       <div className="home-shell min-h-screen w-screen flex flex-col justify-between select-none overflow-hidden relative bg-[var(--background)] text-[var(--foreground)] transition-colors duration-300">
         <div className="home-noise" aria-hidden="true" />
@@ -1016,22 +1089,30 @@ export default function TvPage() {
         {/* Top Header Controls */}
         <header className="w-full flex items-center justify-between px-6 py-4 z-20">
           <div className="flex items-center gap-2">
-            <img src="/menucast-logo.svg" alt="miniKast logo" className="h-6 w-auto" />
+            <ThemeAwareLogo theme={theme} className="h-6 w-[108px]" />
           </div>
 
-          <div className="flex items-center gap-2 text-xs text-[#547a7c]">
+          <div className="flex items-center gap-2 text-xs text-[var(--muted)]">
+            <button
+              onClick={() => setTheme(nextTheme)}
+              title={`Switch to ${nextTheme} theme`}
+              aria-label={`Switch to ${nextTheme} theme`}
+              className="px-2.5 py-1.5 rounded-lg bg-[var(--surface)] hover:bg-[var(--surface-soft)] border border-[var(--accent-soft)] text-[var(--foreground)] transition-colors flex items-center justify-center cursor-pointer shadow-2xs"
+            >
+              {theme === "light" ? <MoonIcon className="w-4 h-4" /> : <SunIcon className="w-4 h-4" />}
+            </button>
             <button
               onClick={toggleFullscreen}
-              className="px-3 py-1.5 rounded-lg bg-white/80 hover:bg-white border border-[#b7eaed] text-[#0d1f21] transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
+              className="px-3 py-1.5 rounded-lg bg-[var(--surface)] hover:bg-[var(--surface-soft)] border border-[var(--accent-soft)] text-[var(--foreground)] transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
             >
-              <kbd className="px-1.5 py-0.5 bg-[#f7fcfc] border border-[#b7eaed] rounded text-[10px] font-mono text-[#547a7c]">F</kbd>
+              <kbd className="px-1.5 py-0.5 bg-[var(--surface-soft)] border border-[var(--accent-soft)] rounded text-[10px] font-mono text-[var(--muted)]">F</kbd>
               <span>{isFullscreen ? "Exit Fullscreen" : "Fullscreen"}</span>
             </button>
             <button
               onClick={() => initTv(true)}
-              className="px-3 py-1.5 rounded-lg bg-white/80 hover:bg-white border border-[#b7eaed] text-[#0d1f21] transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
+              className="px-3 py-1.5 rounded-lg bg-[var(--surface)] hover:bg-[var(--surface-soft)] border border-[var(--accent-soft)] text-[var(--foreground)] transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
             >
-              <kbd className="px-1.5 py-0.5 bg-[#f7fcfc] border border-[#b7eaed] rounded text-[10px] font-mono text-[#547a7c]">R</kbd>
+              <kbd className="px-1.5 py-0.5 bg-[var(--surface-soft)] border border-[var(--accent-soft)] rounded text-[10px] font-mono text-[var(--muted)]">R</kbd>
               <span>New Code</span>
             </button>
           </div>
@@ -1070,7 +1151,7 @@ export default function TvPage() {
               </div>
 
               {/* Countdown Refresh Text */}
-              <p className="mt-3 text-sm sm:text-base font-normal text-[#547a7c] text-center">
+              <p className="mt-3 text-sm sm:text-base font-normal text-[var(--muted)] text-center">
                 Refreshes in {minutes}:{seconds}
               </p>
             </div>
@@ -1078,37 +1159,37 @@ export default function TvPage() {
             {/* Right Column: Setup Instructions & Unified Code Card */}
             <div className="flex flex-col items-start gap-6 max-w-sm sm:max-w-md w-full">
               <div className="space-y-2">
-                <p className="text-base font-bold text-[#547a7c]">
+                <p className="text-base font-bold text-[var(--muted)]">
                   Screen Setup
                 </p>
-                <h1 className="text-3xl sm:text-4xl font-bold text-[#0d1f21] tracking-tight">
+                <h1 className="text-3xl sm:text-4xl font-bold text-[var(--foreground)] tracking-tight">
                   Pair this Display
                 </h1>
-                <p className="text-base font-normal text-[#547a7c] leading-relaxed">
+                <p className="text-base font-normal text-[var(--muted)] leading-relaxed">
                   Scan the QR code with your phone or visit the link below to link this display to your miniKast account.
                 </p>
               </div>
 
               {/* Pairing Code Card */}
-              <div className="w-full bg-white border border-[#b7eaed] rounded-[16px] px-4 py-2.5 flex items-center justify-between shadow-2xs">
-                <span className="text-base font-normal text-[#547a7c]">
+              <div className="w-full bg-[var(--surface)] border border-[var(--muted)] rounded-[16px] px-4 py-2.5 flex items-center justify-between shadow-2xs">
+                <span className="text-base font-normal text-[var(--muted)]">
                   Pairing Code
                 </span>
-                <span className="text-xl sm:text-2xl font-bold text-[#008996] font-mono tracking-wide">
+                <span className="text-xl sm:text-2xl font-bold text-[var(--accent)] font-mono tracking-wide">
                   {pairingCode ? pairingCode.replace("-", " -") : "···· - ····"}
                 </span>
               </div>
 
               {/* Manual Link Fallback */}
-              <p className="text-xs text-[#547a7c] font-mono">
-                Manual link: <span className="text-[#0d1f21] underline">{appUrl}/pair?code={pairingCode}</span>
+              <p className="text-xs text-[var(--muted)] font-mono">
+                Manual link: <span className="text-[var(--foreground)] underline">{appUrl}/pair?code={pairingCode}</span>
               </p>
             </div>
           </div>
         </main>
 
         {/* Footer */}
-        <footer className="w-full text-center text-xs text-[#547a7c] py-4 z-10">
+        <footer className="w-full text-center text-xs text-[var(--muted)] py-4 z-10">
           <span>TV Mode Active &bull; Auto-reconnecting on signal loss</span>
         </footer>
       </div>
@@ -1117,6 +1198,7 @@ export default function TvPage() {
 
   // State 2: Paired screen awaiting first push (Matching Figma node 1485:2350)
   if (state === "paired" && !menuUrl && (!menuData || menuMode === "static")) {
+    const nextTheme = theme === "light" ? "dark" : "light";
     return (
       <div className="home-shell min-h-screen w-screen flex flex-col justify-between select-none overflow-hidden relative bg-[var(--background)] text-[var(--foreground)] transition-colors duration-300">
         <div className="home-noise" aria-hidden="true" />
@@ -1124,15 +1206,23 @@ export default function TvPage() {
         {/* Top Header Controls */}
         <header className="w-full flex items-center justify-between px-6 py-4 z-20">
           <div className="flex items-center gap-2">
-            <img src="/menucast-logo.svg" alt="miniKast logo" className="h-6 w-auto" />
+            <ThemeAwareLogo theme={theme} className="h-6 w-[108px]" />
           </div>
 
-          <div className="flex items-center gap-2 text-xs text-[#547a7c]">
+          <div className="flex items-center gap-2 text-xs text-[var(--muted)]">
+            <button
+              onClick={() => setTheme(nextTheme)}
+              title={`Switch to ${nextTheme} theme`}
+              aria-label={`Switch to ${nextTheme} theme`}
+              className="px-2.5 py-1.5 rounded-lg bg-[var(--surface)] hover:bg-[var(--surface-soft)] border border-[var(--accent-soft)] text-[var(--foreground)] transition-colors flex items-center justify-center cursor-pointer shadow-2xs"
+            >
+              {theme === "light" ? <MoonIcon className="w-4 h-4" /> : <SunIcon className="w-4 h-4" />}
+            </button>
             <button
               onClick={toggleFullscreen}
-              className="px-3 py-1.5 rounded-lg bg-white/80 hover:bg-white border border-[#b7eaed] text-[#0d1f21] transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
+              className="px-3 py-1.5 rounded-lg bg-[var(--surface)] hover:bg-[var(--surface-soft)] border border-[var(--accent-soft)] text-[var(--foreground)] transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
             >
-              <kbd className="px-1.5 py-0.5 bg-[#f7fcfc] border border-[#b7eaed] rounded text-[10px] font-mono text-[#547a7c]">F</kbd>
+              <kbd className="px-1.5 py-0.5 bg-[var(--surface-soft)] border border-[var(--accent-soft)] rounded text-[10px] font-mono text-[var(--muted)]">F</kbd>
               <span>{isFullscreen ? "Exit Fullscreen" : "Fullscreen"}</span>
             </button>
           </div>
@@ -1142,7 +1232,7 @@ export default function TvPage() {
         <main className="flex-1 flex items-center justify-center p-6 z-10">
           <div className="flex flex-col items-center gap-8 max-w-md w-full animate-in fade-in zoom-in-95 duration-500 text-center">
             {/* Green Tick Success Container (Figma node 1485:2416) */}
-            <div className="bg-[#f7fcfc] border-4 border-[#008996] rounded-[24px] size-[131px] flex items-center justify-center shadow-lg">
+            <div className="bg-[var(--surface-soft)] border-4 border-[#008996] rounded-[24px] size-[131px] flex items-center justify-center shadow-lg">
               <svg
                 viewBox="0 0 64 64"
                 fill="none"
@@ -1158,22 +1248,22 @@ export default function TvPage() {
 
             {/* Heading & Next Step Card */}
             <div className="flex flex-col items-center gap-4 w-full">
-              <h1 className="text-[32px] font-bold text-[#0d1f21] leading-tight tracking-tight">
+              <h1 className="text-[32px] font-bold text-[var(--foreground)] leading-tight tracking-tight">
                 TV Paired!
               </h1>
 
               {/* Next Step Card (w-311px, rounded-16px) */}
-              <div className="w-[311px] max-w-full bg-white border border-[#b7eaed] rounded-[16px] p-4 flex flex-col gap-2 shadow-2xs text-center">
+              <div className="w-[311px] max-w-full bg-[var(--surface)] border border-[var(--accent-soft)] rounded-[16px] p-4 flex flex-col gap-2 shadow-2xs text-center">
                 <span className="text-base font-bold text-[#008996]">
                   Next Step
                 </span>
-                <p className="text-base font-normal text-[#547a7c] leading-5">
+                <p className="text-base font-normal text-[var(--muted)] leading-5">
                   Open the miniKast dashboard, upload your design, and publish it!
                 </p>
               </div>
 
               {/* Live Updates Listener */}
-              <div className="flex items-center justify-center gap-2 text-base text-[#547a7c] py-2">
+              <div className="flex items-center justify-center gap-2 text-base text-[var(--muted)] py-2">
                 <span className="size-2 rounded-full bg-[#00c04b] animate-ping shrink-0" />
                 <span>Listening for live updates...</span>
               </div>
@@ -1182,7 +1272,7 @@ export default function TvPage() {
         </main>
 
         {/* Footer */}
-        <footer className="w-full text-center text-xs text-[#547a7c] py-4 z-10">
+        <footer className="w-full text-center text-xs text-[var(--muted)] py-4 z-10">
           <span>TV Mode Active &bull; {tvName} &bull; Auto-reconnecting on signal loss</span>
         </footer>
       </div>
@@ -1202,9 +1292,8 @@ export default function TvPage() {
     >
       {/* Floating Control Menu Bar (Figma node 1492:8284) */}
       <div
-        className={`fixed top-6 inset-x-0 z-50 flex justify-center px-4 pointer-events-none transition-all duration-500 ease-out ${
-          showControls ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-6 pointer-events-none"
-        }`}
+        className={`fixed top-6 inset-x-0 z-50 flex justify-center px-4 pointer-events-none transition-all duration-500 ease-out ${showControls ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-6 pointer-events-none"
+          }`}
       >
         <div className="pointer-events-auto flex items-center justify-between gap-4 bg-[rgba(9,21,22,0.85)] backdrop-blur-md border border-[#304243] shadow-2xl px-4 py-2.5 rounded-[16px] max-w-lg w-full text-white select-none">
           {/* Left Info: Title & Live Dot + Metadata Subtitle */}
