@@ -3,12 +3,52 @@ import { createSupabaseAdminClient } from "@menucast/supabase";
 
 export async function POST(req: NextRequest) {
   try {
-    const { email, password } = await req.json();
+    const body = await req.json();
+    const { email, password, bypassKey } = body;
 
     if (!email || typeof email !== "string" || !email.includes("@")) {
       return NextResponse.json(
         { error: "Please enter a valid email address." },
         { status: 400 }
+      );
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    // 1. Check registration kill-switch and access control
+    const registrationEnabled =
+      process.env.REGISTRATION_ENABLED !== "false" &&
+      process.env.REGISTRATION_ENABLED !== "0";
+
+    const configuredBypassKey = process.env.REGISTRATION_BYPASS_KEY?.trim();
+    const requestBypassKey = (
+      bypassKey ||
+      req.headers.get("x-registration-key") ||
+      req.nextUrl.searchParams.get("key")
+    )
+      ?.toString()
+      .trim();
+
+    const hasValidBypassKey = Boolean(
+      configuredBypassKey &&
+        requestBypassKey &&
+        configuredBypassKey === requestBypassKey
+    );
+
+    const allowedEmails = (process.env.ALLOWED_REGISTRATION_EMAILS || "")
+      .split(",")
+      .map((e) => e.trim().toLowerCase())
+      .filter(Boolean);
+    const isEmailWhitelisted =
+      allowedEmails.length > 0 && allowedEmails.includes(normalizedEmail);
+
+    if (!registrationEnabled && !hasValidBypassKey && !isEmailWhitelisted) {
+      return NextResponse.json(
+        {
+          error:
+            "Account registration is temporarily closed for maintenance. Please check back soon.",
+        },
+        { status: 403 }
       );
     }
 
@@ -23,6 +63,7 @@ export async function POST(req: NextRequest) {
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
+
 
     // Create user via Supabase Auth Admin API
     const { data, error } = await supabase.auth.admin.createUser({
