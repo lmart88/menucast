@@ -1,4 +1,4 @@
-package app.minikast.tv
+package com.minikast.tv
 
 import android.content.BroadcastReceiver
 import android.content.Context

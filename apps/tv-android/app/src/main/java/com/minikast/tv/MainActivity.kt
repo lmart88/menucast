@@ -1,4 +1,4 @@
-package app.minikast.tv
+package com.minikast.tv
 
 import android.animation.ObjectAnimator
 import android.animation.ValueAnimator
@@ -33,7 +33,7 @@ import android.widget.EditText
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import app.minikast.tv.databinding.ActivityMainBinding
+import com.minikast.tv.databinding.ActivityMainBinding
 import java.net.URI
 
 class MainActivity : AppCompatActivity() {
@@ -127,8 +127,10 @@ class MainActivity : AppCompatActivity() {
 
     @SuppressLint("SetJavaScriptEnabled")
     private fun setupWebView() {
-        // Enable Chrome remote inspection (chrome://inspect on Mac)
-        WebView.setWebContentsDebuggingEnabled(true)
+        // Enable Chrome remote inspection only in debug builds
+        if (BuildConfig.DEBUG) {
+            WebView.setWebContentsDebuggingEnabled(true)
+        }
 
         val webView = binding.webView
         val settings = webView.settings
@@ -136,23 +138,26 @@ class MainActivity : AppCompatActivity() {
         // Enable JavaScript and local storage capabilities
         settings.javaScriptEnabled = true
         settings.domStorageEnabled = true
-        settings.databaseEnabled = true
         settings.mediaPlaybackRequiresUserGesture = false
         settings.allowFileAccess = true
         settings.allowContentAccess = true
         settings.useWideViewPort = true
         settings.loadWithOverviewMode = true
 
-        // Disable safe browsing check for private local IPs (Android 8+)
+        // Disable safe browsing check for private local IPs in debug only
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            settings.safeBrowsingEnabled = false
+            settings.safeBrowsingEnabled = !BuildConfig.DEBUG
         }
 
         // Cache configuration for fast reload & offline fallback
         settings.cacheMode = WebSettings.LOAD_DEFAULT
 
-        // Allow mixed content for local network development
-        settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+        // Mixed content configuration
+        settings.mixedContentMode = if (BuildConfig.DEBUG) {
+            WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+        } else {
+            WebSettings.MIXED_CONTENT_NEVER_ALLOW
+        }
 
         // TV hardware acceleration
         webView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
@@ -227,9 +232,14 @@ class MainActivity : AppCompatActivity() {
                 handler: SslErrorHandler?,
                 error: SslError?
             ) {
-                Log.w(TAG, "SSL Certificate Notice on local development: $error. Proceeding...")
-                // Allow self-signed SSL certificates for local network testing (e.g. 192.168.x.x)
-                handler?.proceed()
+                if (BuildConfig.DEBUG) {
+                    Log.w(TAG, "SSL Certificate Notice (Debug): $error. Proceeding for local dev...")
+                    handler?.proceed()
+                } else {
+                    Log.e(TAG, "SSL Certificate Error (Release): $error. Cancelling navigation.")
+                    handler?.cancel()
+                    showErrorAndScheduleRetry("SSL Security Error: Untrusted certificate.")
+                }
             }
         }
     }

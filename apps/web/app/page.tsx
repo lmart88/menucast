@@ -255,15 +255,20 @@ export default function HomePage() {
       <div className="w-full bg-[var(--button-text)] border-t border-[var(--line)] z-10 transition-colors duration-300">
         <footer className="w-full max-w-[806px] mx-auto px-4 sm:px-8 md:px-16 py-4 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-[var(--muted)]">
           <span>© 2026 MenuCast. All rights reserved.</span>
-          <span>
-            Contact:{" "}
-            <a
-              href="mailto:hello@menucast.com"
-              className="text-[var(--foreground)] font-bold hover:underline"
-            >
-              hello@menucast.com
-            </a>
-          </span>
+          <div className="flex items-center gap-4">
+            <Link href="/privacy" className="hover:text-[var(--foreground)] transition-colors">
+              Privacy Policy
+            </Link>
+            <span>
+              Contact:{" "}
+              <a
+                href="mailto:hello@menucast.com"
+                className="text-[var(--foreground)] font-bold hover:underline"
+              >
+                hello@menucast.com
+              </a>
+            </span>
+          </div>
         </footer>
       </div>
     </main>

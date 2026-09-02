@@ -39,3 +39,11 @@ next-env.d.ts
 
 # figma plugin
 apps/figma-plugin/dist/
+
+# android
+*.jks
+*.keystore
+keystore.properties
+apps/tv-android/.gradle/
+apps/tv-android/**/build/
+apps/tv-android/local.properties
