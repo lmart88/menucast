@@ -204,7 +204,7 @@ export default function HomePage() {
           </div>
 
           {/* Supported Format Badges */}
-          <div className="flex gap-2 justify-center" aria-label="Supported source formats">
+          {/* <div className="flex gap-2 justify-center" aria-label="Supported source formats">
             {(["image", "pdf", "video", "figma"] as const).map((kind) => (
               <span
                 key={kind}
@@ -215,7 +215,7 @@ export default function HomePage() {
                 <SourceIcon kind={kind} />
               </span>
             ))}
-          </div>
+          </div> */}
 
           {/* Primary CTA */}
           <Link

@@ -1,7 +1,9 @@
 <resources>
     <string name="app_name">miniKast</string>
-    <string name="tv_player_title">miniKast TV Player</string>
-    <string name="default_server_url">http://192.168.4.117:3000/tv</string>
+    <string name="tv_player_title">miniKast TV</string>
+    <string name="connecting_default">Connecting to miniKast.com…</string>
+    <string name="connecting_to_server">Connecting to %s…</string>
+    <string name="default_server_url">https://192.168.4.117:3000/tv</string>
     <string name="production_server_url">https://minikast.com/tv</string>
     <string name="network_error_title">Connection Lost</string>
     <string name="network_error_message">Unable to connect to miniKast server. Reconnecting automatically…</string>

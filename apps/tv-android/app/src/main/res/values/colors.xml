@@ -1,9 +1,15 @@
 <resources>
-    <color name="bg_black">#0A0A0A</color>
-    <color name="emerald_500">#10B981</color>
-    <color name="emerald_400">#34D399</color>
+    <color name="bg_black">#091516</color>
+    <color name="bg_dark_slate">#091516</color>
+    <color name="bg_radial_glow">#1F3132</color>
+    <color name="brand_teal">#008996</color>
+    <color name="brand_teal_dark">#015860</color>
+    <color name="brand_orange">#FF8400</color>
     <color name="text_white">#FFFFFF</color>
-    <color name="text_muted">#9CA3AF</color>
-    <color name="card_bg">#171717</color>
-    <color name="card_border">#262626</color>
+    <color name="text_muted">#B7EAED</color>
+    <color name="text_tertiary_mint">#B7EAED</color>
+    <color name="card_bg">#0D1F21</color>
+    <color name="card_border">#304243</color>
+    <color name="emerald_500">#008996</color>
+    <color name="emerald_400">#34D399</color>
 </resources>

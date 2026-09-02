@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/rootContainer"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/bg_black"
+    android:background="@drawable/bg_tv_radial"
     android:keepScreenOn="true">
 
     <!-- Hardware Accelerated WebView -->
@@ -14,43 +15,39 @@
         android:background="@color/bg_black"
         android:scrollbars="none" />
 
-    <!-- Initial Loading Overlay -->
+    <!-- Initial Loading / Connecting Overlay (Matching Figma node 1510:2556) -->
     <LinearLayout
         android:id="@+id/loadingOverlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="@color/bg_black"
+        android:background="@drawable/bg_tv_radial"
         android:gravity="center"
         android:orientation="vertical"
+        android:padding="48dp"
         android:visibility="visible">
 
-        <ProgressBar
-            android:id="@+id/progressBar"
-            style="?android:attr/progressBarStyleLarge"
-            android:layout_width="64dp"
-            android:layout_height="64dp"
-            android:indeterminate="true"
-            android:indeterminateTint="@color/emerald_400" />
+        <!-- Logo Lockup: Bird Mascot + Wordmark -->
+        <ImageView
+            android:id="@+id/logoLockup"
+            android:layout_width="480dp"
+            android:layout_height="102dp"
+            android:adjustViewBounds="true"
+            android:contentDescription="@string/app_name"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_minikast_logo" />
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:fontFamily="sans-serif-medium"
-            android:text="@string/tv_player_title"
-            android:textColor="@color/text_white"
-            android:textSize="22sp"
-            android:letterSpacing="0.05" />
-
+        <!-- Dynamic Status Copy (e.g. "Connecting to miniKast.com…") -->
         <TextView
             android:id="@+id/loadingStatusText"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="28dp"
             android:fontFamily="sans-serif"
-            android:text="Starting display player…"
-            android:textColor="@color/text_muted"
-            android:textSize="14sp" />
+            android:gravity="center"
+            android:letterSpacing="0.02"
+            android:text="@string/connecting_default"
+            android:textColor="@color/text_tertiary_mint"
+            android:textSize="22sp" />
     </LinearLayout>
 
     <!-- Error / Connection Lost Overlay -->
@@ -58,19 +55,28 @@
         android:id="@+id/errorOverlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="@color/bg_black"
+        android:background="@drawable/bg_tv_radial"
         android:gravity="center"
         android:orientation="vertical"
-        android:padding="32dp"
+        android:padding="48dp"
         android:visibility="gone">
+
+        <ImageView
+            android:layout_width="320dp"
+            android:layout_height="68dp"
+            android:adjustViewBounds="true"
+            android:contentDescription="@string/app_name"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_minikast_logo" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginTop="32dp"
             android:fontFamily="sans-serif-medium"
             android:text="@string/network_error_title"
             android:textColor="@color/text_white"
-            android:textSize="28sp" />
+            android:textSize="26sp" />
 
         <TextView
             android:id="@+id/errorMessageText"
@@ -79,22 +85,22 @@
             android:layout_marginTop="12dp"
             android:fontFamily="sans-serif"
             android:gravity="center"
-            android:maxWidth="480dp"
+            android:maxWidth="520dp"
             android:text="@string/network_error_message"
-            android:textColor="@color/text_muted"
+            android:textColor="@color/text_tertiary_mint"
             android:textSize="16sp" />
 
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
+            android:layout_marginTop="28dp"
             android:orientation="horizontal">
 
             <Button
                 android:id="@+id/retryButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:backgroundTint="@color/emerald_500"
+                android:backgroundTint="@color/brand_teal"
                 android:focusable="true"
                 android:focusedByDefault="true"
                 android:paddingStart="28dp"
@@ -102,7 +108,7 @@
                 android:paddingTop="12dp"
                 android:paddingBottom="12dp"
                 android:text="@string/retry_button"
-                android:textColor="@color/bg_black"
+                android:textColor="@color/text_white"
                 android:textSize="15sp"
                 android:textStyle="bold" />
 
@@ -118,7 +124,7 @@
                 android:paddingTop="12dp"
                 android:paddingBottom="12dp"
                 android:text="@string/change_server_url"
-                android:textColor="@color/text_white"
+                android:textColor="@color/text_tertiary_mint"
                 android:textSize="15sp" />
         </LinearLayout>
     </LinearLayout>

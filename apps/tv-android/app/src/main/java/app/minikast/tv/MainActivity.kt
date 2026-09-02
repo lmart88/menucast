@@ -1,5 +1,7 @@
 package app.minikast.tv
 
+import android.animation.ObjectAnimator
+import android.animation.ValueAnimator
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.SharedPreferences
@@ -32,6 +34,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import app.minikast.tv.databinding.ActivityMainBinding
+import java.net.URI
 
 class MainActivity : AppCompatActivity() {
 
@@ -40,6 +43,7 @@ class MainActivity : AppCompatActivity() {
         private const val PREFS_NAME = "minikast_prefs"
         private const val KEY_SERVER_URL = "server_url"
         private const val AUTO_RETRY_DELAY_MS = 5000L
+        private const val FADE_TRANSITION_DURATION_MS = 300L
     }
 
     private lateinit var binding: ActivityMainBinding
@@ -49,6 +53,7 @@ class MainActivity : AppCompatActivity() {
     private var isRetrying = false
     private var connectivityManager: ConnectivityManager? = null
     private var networkCallback: ConnectivityManager.NetworkCallback? = null
+    private var pulseAnimator: ObjectAnimator? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -95,6 +100,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        stopPulsingAnimation()
         networkCallback?.let { connectivityManager?.unregisterNetworkCallback(it) }
         binding.webView.destroy()
     }
@@ -166,8 +172,10 @@ class MainActivity : AppCompatActivity() {
             override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                 Log.d(TAG, "Starting URL load: $url")
                 if (!isPageLoadedSuccessfully) {
+                    binding.loadingOverlay.alpha = 1f
                     binding.loadingOverlay.visibility = View.VISIBLE
                     binding.errorOverlay.visibility = View.GONE
+                    startPulsingAnimation()
                 }
             }
 
@@ -175,8 +183,17 @@ class MainActivity : AppCompatActivity() {
                 Log.d(TAG, "Finished loading URL: $url")
                 isPageLoadedSuccessfully = true
                 isRetrying = false
-                binding.loadingOverlay.visibility = View.GONE
+                stopPulsingAnimation()
                 binding.errorOverlay.visibility = View.GONE
+
+                // Smooth 300ms alpha crossfade to reveal live player
+                binding.loadingOverlay.animate()
+                    .alpha(0f)
+                    .setDuration(FADE_TRANSITION_DURATION_MS)
+                    .withEndAction {
+                        binding.loadingOverlay.visibility = View.GONE
+                    }
+                    .start()
             }
 
             override fun onReceivedError(
@@ -219,11 +236,51 @@ class MainActivity : AppCompatActivity() {
 
     private fun loadPlayerUrl() {
         val serverUrl = getServerUrl()
-        Log.d(TAG, "Loading miniKast TV player from: $serverUrl")
-        binding.loadingStatusText.text = "Connecting to $serverUrl…"
+        val displayHost = getDisplayHostName(serverUrl)
+        Log.d(TAG, "Loading miniKast TV player from: $serverUrl (Host: $displayHost)")
+
+        binding.loadingStatusText.text = getString(R.string.connecting_to_server, displayHost)
+        binding.loadingOverlay.alpha = 1f
         binding.loadingOverlay.visibility = View.VISIBLE
         binding.errorOverlay.visibility = View.GONE
+        startPulsingAnimation()
+
         binding.webView.loadUrl(serverUrl)
+    }
+
+    private fun getDisplayHostName(urlStr: String): String {
+        return try {
+            val uri = URI(urlStr)
+            val host = uri.host
+            if (host.isNullOrBlank() || host.contains("minikast.com", ignoreCase = true)) {
+                "miniKast.com"
+            } else {
+                host
+            }
+        } catch (e: Exception) {
+            "miniKast.com"
+        }
+    }
+
+    private fun startPulsingAnimation() {
+        pulseAnimator?.cancel()
+        pulseAnimator = ObjectAnimator.ofFloat(
+            binding.loadingStatusText,
+            View.ALPHA,
+            1.0f,
+            0.45f,
+            1.0f
+        ).apply {
+            duration = 2000L
+            repeatCount = ValueAnimator.INFINITE
+            start()
+        }
+    }
+
+    private fun stopPulsingAnimation() {
+        pulseAnimator?.cancel()
+        pulseAnimator = null
+        binding.loadingStatusText.alpha = 1.0f
     }
 
     private fun getServerUrl(): String {
@@ -241,6 +298,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showErrorAndScheduleRetry(message: String) {
+        stopPulsingAnimation()
         binding.loadingOverlay.visibility = View.GONE
         binding.errorOverlay.visibility = View.VISIBLE
         binding.errorMessageText.text = "Connection lost: $message\nRetrying automatically in 5s…"
