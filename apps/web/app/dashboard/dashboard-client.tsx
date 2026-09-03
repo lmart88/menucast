@@ -95,9 +95,10 @@ interface Props {
   initialTvs: TV[];
   hasToken: boolean;
   userName: string;
+  maxScreens?: number;
 }
 
-export default function DashboardClient({ initialTvs, hasToken, userName }: Props) {
+export default function DashboardClient({ initialTvs, hasToken, userName, maxScreens = 1 }: Props) {
   const [tvs, setTvs] = useState<TV[]>(initialTvs);
   const [nowTime, setNowTime] = useState(Date.now());
   const [theme, setTheme] = useState<Theme>("light");
@@ -636,14 +637,23 @@ export default function DashboardClient({ initialTvs, hasToken, userName }: Prop
       {/* Main Body */}
       <section className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-8 py-8 sm:py-12 z-10 space-y-6">
         {/* Page Title Row */}
-        <div className="flex items-center justify-between gap-4">
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[var(--foreground)]">
-            Displays
-          </h1>
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[var(--foreground)]">
+              Displays
+            </h1>
+            <span className="text-xs px-2.5 py-0.5 rounded-full bg-[var(--surface-soft)] border border-[var(--accent-soft)] text-[var(--muted)] font-mono font-medium">
+              {tvs.length} / {maxScreens} paired
+            </span>
+          </div>
 
           <Link
             href="/pair"
-            className="bg-[#f27200] hover:bg-[#ff8000] text-white px-4 sm:px-5 py-2 rounded-full text-xs sm:text-sm font-bold shadow-xs hover:shadow transition-all hover:scale-[1.02] active:scale-[0.99] flex items-center gap-1.5 cursor-pointer"
+            className={`px-4 sm:px-5 py-2 rounded-full text-xs sm:text-sm font-bold shadow-xs transition-all flex items-center gap-1.5 cursor-pointer ${
+              tvs.length >= maxScreens
+                ? "bg-[var(--surface-soft)] text-[var(--muted)] border border-[var(--accent-soft)] hover:bg-[var(--surface)] hover:text-[var(--foreground)]"
+                : "bg-[#f27200] hover:bg-[#ff8000] text-white hover:shadow hover:scale-[1.02] active:scale-[0.99]"
+            }`}
           >
             <span>Pair New Screen</span>
           </Link>

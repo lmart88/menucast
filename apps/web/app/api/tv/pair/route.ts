@@ -59,9 +59,36 @@ export async function POST(req: NextRequest) {
   // Check if TV with this code exists
   const { data: existing } = await supabase
     .from("tvs")
-    .select("id")
+    .select("id, user_id, name")
     .eq("pairing_code", pairing_code)
     .single();
+
+  const isAlreadyOwned = existing && existing.user_id === session.user.id;
+
+  // Enforce screen pairing limit during testing
+  const maxScreensEnv = process.env.MAX_PAIRED_SCREENS_PER_USER;
+  const maxScreens = maxScreensEnv ? parseInt(maxScreensEnv, 10) : 1;
+
+  if (!isAlreadyOwned && Number.isFinite(maxScreens) && maxScreens > 0) {
+    const { data: userTvs, count: activeCount } = await supabase
+      .from("tvs")
+      .select("id, name", { count: "exact" })
+      .eq("user_id", session.user.id)
+      .not("paired_at", "is", null);
+
+    if ((activeCount ?? 0) >= maxScreens) {
+      const existingName = userTvs?.[0]?.name ? `"${userTvs[0].name}"` : "your existing screen";
+      return NextResponse.json(
+        {
+          error: `Screen limit reached (maximum ${maxScreens} screen${maxScreens > 1 ? "s" : ""} allowed during testing). Please unpair or delete ${existingName} from your dashboard before pairing a new one.`,
+          code: "SCREEN_LIMIT_REACHED",
+          max_screens: maxScreens,
+          active_count: activeCount,
+        },
+        { status: 403 }
+      );
+    }
+  }
 
   let tv;
   const now = new Date().toISOString();

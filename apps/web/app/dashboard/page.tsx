@@ -8,6 +8,9 @@ export default async function DashboardPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
 
+  const maxScreensEnv = process.env.MAX_PAIRED_SCREENS_PER_USER;
+  const maxScreens = maxScreensEnv ? parseInt(maxScreensEnv, 10) : 1;
+
   const supabase = createClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -34,6 +37,7 @@ export default async function DashboardPage() {
       initialTvs={tvs ?? []}
       hasToken={!!tokenData}
       userName={session.user.name ?? session.user.email ?? ""}
+      maxScreens={maxScreens}
     />
   );
 }

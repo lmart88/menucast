@@ -44,6 +44,7 @@ function PairForm() {
   const [pairingCode, setPairingCode] = useState(urlCode);
   const [tvName, setTvName] = useState("");
   const [error, setError] = useState("");
+  const [errorCode, setErrorCode] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
@@ -86,10 +87,12 @@ function PairForm() {
     const cleanCode = pairingCode.trim().toUpperCase();
     if (!cleanCode) {
       setError("Please enter a valid pairing code");
+      setErrorCode("");
       return;
     }
 
     setError("");
+    setErrorCode("");
     setIsSubmitting(true);
     try {
       const res = await fetch("/api/tv/pair", {
@@ -104,9 +107,11 @@ function PairForm() {
       } else {
         const data = await res.json();
         setError(data.error ?? "Failed to pair TV");
+        setErrorCode(data.code ?? "");
       }
     } catch {
       setError("Network error pairing TV");
+      setErrorCode("");
     } finally {
       setIsSubmitting(false);
     }
@@ -211,8 +216,23 @@ function PairForm() {
             </div>
 
             {error && (
-              <div className="w-full p-2.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs text-center">
-                {error}
+              <div className={`w-full p-3 rounded-xl text-xs space-y-2.5 ${
+                errorCode === "SCREEN_LIMIT_REACHED"
+                  ? "bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-300"
+                  : "bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400"
+              }`}>
+                <div className="flex items-start gap-2">
+                  <span className="text-sm select-none leading-tight">{errorCode === "SCREEN_LIMIT_REACHED" ? "⚠️" : "✕"}</span>
+                  <p className="flex-1 text-left leading-normal">{error}</p>
+                </div>
+                {errorCode === "SCREEN_LIMIT_REACHED" && (
+                  <Link
+                    href="/dashboard"
+                    className="inline-flex items-center justify-center w-full py-2 px-3 bg-[#f27200] hover:bg-[#ff8000] text-white font-bold rounded-lg text-xs transition-all shadow-xs cursor-pointer text-center"
+                  >
+                    Go to Dashboard to Manage Screens →
+                  </Link>
+                )}
               </div>
             )}
 

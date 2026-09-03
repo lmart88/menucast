@@ -53,6 +53,30 @@ async function broadcastEvent(
   });
 }
 
+function extractStoragePath(url: string | null | undefined): string | null {
+  if (!url) return null;
+  try {
+    const publicMarker = "/storage/v1/object/public/menus/";
+    const publicIdx = url.indexOf(publicMarker);
+    if (publicIdx !== -1) {
+      return decodeURIComponent(url.substring(publicIdx + publicMarker.length));
+    }
+    const signMarker = "/storage/v1/object/sign/menus/";
+    const signIdx = url.indexOf(signMarker);
+    if (signIdx !== -1) {
+      const rawPath = url.substring(signIdx + signMarker.length).split("?")[0];
+      return decodeURIComponent(rawPath);
+    }
+    const match = url.match(/\/menus\/(.+)$/);
+    if (match && match[1]) {
+      return decodeURIComponent(match[1].split("?")[0]);
+    }
+  } catch {
+    // ignore
+  }
+  return null;
+}
+
 export async function OPTIONS() {
   return new Response(null, { status: 200 });
 }
@@ -83,10 +107,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "tv_id and image_url are required" }, { status: 400 });
   }
 
-  // Verify TV belongs to user
+  // Verify TV belongs to user and get previous menu URL for storage pruning
   const { data: tv, error: tvError } = await supabase
     .from("tvs")
-    .select("id, pairing_code")
+    .select("id, pairing_code, current_menu_url")
     .eq("id", tv_id)
     .eq("user_id", userId)
     .single();
@@ -150,6 +174,17 @@ export async function POST(req: NextRequest) {
     menu_id: menu?.id,
     pushed_at: menu?.pushed_at || new Date().toISOString(),
   });
+
+  // Storage optimization: Clean up replaced previous menu image from storage bucket
+  if (tv.current_menu_url && tv.current_menu_url !== image_url) {
+    const oldPath = extractStoragePath(tv.current_menu_url);
+    if (oldPath) {
+      supabase.storage
+        .from("menus")
+        .remove([oldPath])
+        .catch((err) => console.warn("Failed to prune replaced menu image from storage:", err));
+    }
+  }
 
   return NextResponse.json({ success: true, menu });
 }
