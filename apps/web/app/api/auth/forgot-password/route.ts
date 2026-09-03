@@ -36,24 +36,34 @@ export async function POST(req: NextRequest) {
 
     const finalRedirectUrl = `${targetOrigin}/reset-password`;
 
-    // 1. Generate direct recovery link & token via admin client
-    const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
-      type: "recovery",
-      email: cleanEmail,
-      options: {
-        redirectTo: finalRedirectUrl,
-      },
-    });
+    const isDevResetEnabled =
+      process.env.DEV_PASSWORD_RESET?.toLowerCase() !== "false" &&
+      process.env.NEXT_PUBLIC_DEV_PASSWORD_RESET?.toLowerCase() !== "false";
 
     let directAppUrl = "";
-    if (linkData?.properties?.hashed_token) {
-      // Build direct local app URL with token_hash to bypass Supabase hosted redirector
-      directAppUrl = `${finalRedirectUrl}?token_hash=${linkData.properties.hashed_token}&email=${encodeURIComponent(cleanEmail)}`;
-      console.log("\n=======================================================");
-      console.log("🔗 DIRECT PASSWORD RESET LINK (Bypasses localhost):");
-      console.log(`📧 User: ${cleanEmail}`);
-      console.log(`👉 Link: ${directAppUrl}`);
-      console.log("=======================================================\n");
+
+    // 1. Generate direct recovery link & token via admin client if dev reset mode is enabled
+    if (isDevResetEnabled) {
+      try {
+        const { data: linkData } = await adminClient.auth.admin.generateLink({
+          type: "recovery",
+          email: cleanEmail,
+          options: {
+            redirectTo: finalRedirectUrl,
+          },
+        });
+
+        if (linkData?.properties?.hashed_token) {
+          directAppUrl = `${finalRedirectUrl}?token_hash=${linkData.properties.hashed_token}&email=${encodeURIComponent(cleanEmail)}`;
+          console.log("\n=======================================================");
+          console.log("🔗 DIRECT PASSWORD RESET LINK (Bypasses localhost):");
+          console.log(`📧 User: ${cleanEmail}`);
+          console.log(`👉 Link: ${directAppUrl}`);
+          console.log("=======================================================\n");
+        }
+      } catch (err) {
+        console.warn("Could not generate direct recovery link:", err);
+      }
     }
 
     // 2. Dispatch email through Supabase Auth mailer as background attempt
@@ -68,7 +78,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       message: "If an account exists with that email, a password reset link has been dispatched.",
-      direct_link: directAppUrl,
+      direct_link: isDevResetEnabled ? directAppUrl || undefined : undefined,
       redirect_url: finalRedirectUrl,
     });
   } catch (err) {

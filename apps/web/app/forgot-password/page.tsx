@@ -81,8 +81,8 @@ function ForgotPasswordForm() {
               </p>
             </div>
 
-            {/* Direct testing button (if link returned during dev/testing) */}
-            {directLink && (
+            {/* Direct testing button (if link returned during dev/testing and not disabled) */}
+            {directLink && process.env.NEXT_PUBLIC_DEV_PASSWORD_RESET?.toLowerCase() !== "false" && (
               <a
                 href={directLink}
                 className="w-full h-10 bg-[var(--surface)] border border-[var(--accent-soft)] hover:bg-[var(--surface-soft)] text-[var(--accent)] font-semibold text-xs rounded-lg shadow-sm transition-all flex items-center justify-center gap-1.5"
