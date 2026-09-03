@@ -126,9 +126,19 @@ export default function HomePage() {
   const [theme, setTheme] = useState<Theme>("light");
   const [isHydrated, setIsHydrated] = useState(false);
 
-  // Initialize theme after hydration to avoid mismatch
+  // Initialize theme and catch recovery hash redirects
   useEffect(() => {
     setIsHydrated(true);
+
+    // If recovery hash lands on the homepage, immediately redirect to /reset-password
+    if (typeof window !== "undefined" && window.location.hash) {
+      const hash = window.location.hash.substring(1);
+      if (hash.includes("type=recovery") || hash.includes("access_token=")) {
+        window.location.replace(`/reset-password${window.location.hash}`);
+        return;
+      }
+    }
+
     try {
       const stored = window.localStorage.getItem("menucast-theme");
       if (stored === "dark") {
