@@ -21,17 +21,18 @@ export async function POST(req: NextRequest) {
     const anonClient = createSupabaseClient(supabaseUrl, anonKey);
 
     // Determine target redirect origin
+    const originHeader = req.headers.get("origin");
     const host = req.headers.get("x-forwarded-host") || req.headers.get("host") || "";
-    const proto = req.headers.get("x-forwarded-proto") || "https";
+    const proto = req.headers.get("x-forwarded-proto") || (host.includes("localhost") || host.includes("127.0.0.1") ? "http" : "https");
 
-    let targetOrigin = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || "https://192.168.4.117:3000";
+    let targetOrigin = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || "https://minikast.com";
 
     if (redirect_to && typeof redirect_to === "string" && redirect_to.startsWith("http")) {
       targetOrigin = redirect_to.replace(/\/reset-password\/?$/, "");
+    } else if (originHeader && originHeader.startsWith("http")) {
+      targetOrigin = originHeader.replace(/\/reset-password\/?$/, "");
     } else if (host) {
       targetOrigin = `${proto}://${host}`;
-    } else if (req.headers.get("origin")) {
-      targetOrigin = req.headers.get("origin")!;
     }
 
     const finalRedirectUrl = `${targetOrigin}/reset-password`;
@@ -66,13 +67,20 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 2. Dispatch email through Supabase Auth mailer as background attempt
-    try {
-      await anonClient.auth.resetPasswordForEmail(cleanEmail, {
+    // 2. Dispatch email through Supabase Auth mailer
+    const { error: emailError } = await anonClient.auth.resetPasswordForEmail(cleanEmail, {
+      redirectTo: finalRedirectUrl,
+    });
+
+    if (emailError) {
+      console.error("❌ Supabase resetPasswordForEmail failed:", {
+        message: emailError.message,
+        status: emailError.status,
+        email: cleanEmail,
         redirectTo: finalRedirectUrl,
       });
-    } catch (e) {
-      // Ignore mailer rate limit in dev
+    } else {
+      console.log(`✅ Supabase resetPasswordForEmail successfully dispatched for: ${cleanEmail}`);
     }
 
     return NextResponse.json({
