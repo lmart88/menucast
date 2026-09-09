@@ -4,12 +4,14 @@ import android.animation.ObjectAnimator
 import android.animation.ValueAnimator
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.Intent
 import android.content.SharedPreferences
 import android.graphics.Bitmap
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
+import android.net.Uri
 import android.net.http.SslError
 import android.os.Build
 import android.os.Bundle
@@ -227,6 +229,17 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
+            override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+                val uri = request?.url ?: return false
+                return handleExternalUrl(view, uri)
+            }
+
+            @Deprecated("Deprecated in Java")
+            override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
+                val uri = if (url != null) Uri.parse(url) else return false
+                return handleExternalUrl(view, uri)
+            }
+
             override fun onReceivedSslError(
                 view: WebView?,
                 handler: SslErrorHandler?,
@@ -241,6 +254,26 @@ class MainActivity : AppCompatActivity() {
                     showErrorAndScheduleRetry("SSL Security Error: Untrusted certificate.")
                 }
             }
+        }
+    }
+
+    private fun handleExternalUrl(view: WebView?, uri: Uri): Boolean {
+        val urlString = uri.toString()
+        // If the URL is the TV player itself (/tv) and not pairing/login/dashboard, let WebView load it
+        if (urlString.contains("/tv") && !urlString.contains("/pair") && !urlString.contains("/login") && !urlString.contains("/dashboard")) {
+            return false
+        }
+
+        // Open pairing and external URLs in the system browser outside the TV app
+        return try {
+            val intent = Intent(Intent.ACTION_VIEW, uri).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            view?.context?.startActivity(intent)
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to launch external browser for $uri", e)
+            true // Consumed so WebView does not navigate in-place
         }
     }
 

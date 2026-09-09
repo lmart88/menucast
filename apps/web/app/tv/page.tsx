@@ -1189,6 +1189,12 @@ export default function TvPage() {
                     href={pairUrl}
                     target="_blank"
                     rel="noopener noreferrer"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (typeof window !== "undefined") {
+                        window.open(pairUrl, "_blank", "noopener,noreferrer");
+                      }
+                    }}
                     className="text-[var(--foreground)] hover:text-[var(--accent)] underline transition-colors break-all focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] rounded cursor-pointer inline-flex items-center gap-1 font-semibold"
                     title="Open pairing URL in new tab"
                   >
