@@ -1083,113 +1083,130 @@ export default function TvPage() {
   if (state === "pairing") {
     const nextTheme = theme === "light" ? "dark" : "light";
     return (
-      <div className="home-shell min-h-screen w-screen flex flex-col justify-between select-none overflow-hidden relative bg-[var(--background)] text-[var(--foreground)] transition-colors duration-300">
+      <div className="home-shell h-screen h-[100dvh] max-h-screen w-screen flex flex-col justify-between select-none overflow-hidden relative bg-[var(--background)] text-[var(--foreground)] transition-colors duration-300">
         <div className="home-noise" aria-hidden="true" />
 
         {/* Top Header Controls */}
-        <header className="w-full flex items-center justify-between px-6 py-4 z-20">
+        <header className="w-full flex items-center justify-between px-4 sm:px-6 py-2.5 sm:py-4 z-20 shrink-0">
           <div className="flex items-center gap-2">
-            <ThemeAwareLogo theme={theme} className="h-6 w-[108px]" />
+            <ThemeAwareLogo theme={theme} className="h-5 sm:h-6 w-[90px] sm:w-[108px]" />
           </div>
 
-          <div className="flex items-center gap-2 text-xs text-[var(--muted)]">
+          <div className="flex items-center gap-1.5 sm:gap-2 text-xs text-[var(--muted)]">
             <button
               onClick={() => setTheme(nextTheme)}
               title={`Switch to ${nextTheme} theme`}
               aria-label={`Switch to ${nextTheme} theme`}
-              className="px-2.5 py-1.5 rounded-lg bg-[var(--surface)] hover:bg-[var(--surface-soft)] border border-[var(--accent-soft)] text-[var(--foreground)] transition-colors flex items-center justify-center cursor-pointer shadow-2xs"
+              className="px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-lg bg-[var(--surface)] hover:bg-[var(--surface-soft)] border border-[var(--accent-soft)] text-[var(--foreground)] transition-colors flex items-center justify-center cursor-pointer shadow-2xs"
             >
-              {theme === "light" ? <MoonIcon className="w-4 h-4" /> : <SunIcon className="w-4 h-4" />}
+              {theme === "light" ? <MoonIcon className="w-3.5 sm:w-4 h-3.5 sm:h-4" /> : <SunIcon className="w-3.5 sm:w-4 h-3.5 sm:h-4" />}
             </button>
             <button
               onClick={toggleFullscreen}
-              className="px-3 py-1.5 rounded-lg bg-[var(--surface)] hover:bg-[var(--surface-soft)] border border-[var(--accent-soft)] text-[var(--foreground)] transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
+              className="px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-[var(--surface)] hover:bg-[var(--surface-soft)] border border-[var(--accent-soft)] text-[var(--foreground)] transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs text-[11px] sm:text-xs"
             >
-              <kbd className="px-1.5 py-0.5 bg-[var(--surface-soft)] border border-[var(--accent-soft)] rounded text-[10px] font-mono text-[var(--muted)]">F</kbd>
+              <kbd className="hidden sm:inline-block px-1.5 py-0.5 bg-[var(--surface-soft)] border border-[var(--accent-soft)] rounded text-[10px] font-mono text-[var(--muted)]">F</kbd>
               <span>{isFullscreen ? "Exit Fullscreen" : "Fullscreen"}</span>
             </button>
             <button
               onClick={() => initTv(true)}
-              className="px-3 py-1.5 rounded-lg bg-[var(--surface)] hover:bg-[var(--surface-soft)] border border-[var(--accent-soft)] text-[var(--foreground)] transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
+              className="px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-[var(--surface)] hover:bg-[var(--surface-soft)] border border-[var(--accent-soft)] text-[var(--foreground)] transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs text-[11px] sm:text-xs"
             >
-              <kbd className="px-1.5 py-0.5 bg-[var(--surface-soft)] border border-[var(--accent-soft)] rounded text-[10px] font-mono text-[var(--muted)]">R</kbd>
+              <kbd className="hidden sm:inline-block px-1.5 py-0.5 bg-[var(--surface-soft)] border border-[var(--accent-soft)] rounded text-[10px] font-mono text-[var(--muted)]">R</kbd>
               <span>New Code</span>
             </button>
           </div>
         </header>
 
         {/* Main Pairing Card (Matching Figma node 1459:10382) */}
-        <main className="flex-1 flex items-center justify-center p-6 z-10">
-          <div className="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-10 max-w-4xl w-full animate-in fade-in zoom-in-95 duration-500">
+        <main className="flex-1 flex items-center justify-center p-3 sm:p-6 z-10 min-h-0 overflow-hidden">
+          <div className="flex flex-col md:flex-row items-center justify-center gap-4 sm:gap-6 md:gap-8 lg:gap-10 max-w-4xl w-full max-h-full animate-in fade-in zoom-in-95 duration-500">
             {/* Left Column: High-Contrast QR Code Card with Perched Mascot */}
-            <div className="flex flex-col items-center">
+            <div className="flex flex-col items-center shrink-0">
               <div className="relative">
                 {/* Perched Mascot tilted at 33.52deg on top-left of QR frame */}
-                <div className="-mb-[10px] z-20 pointer-events-none">
+                <div className="-mb-[8px] sm:-mb-[10px] z-20 pointer-events-none">
                   <img
                     src="/logo-minikast.svg"
                     alt="miniKast mascot"
-                    className="w-12 h-auto"
+                    className="w-9 sm:w-12 h-auto"
                   />
                 </div>
 
                 {/* QR Code Container with 4px border */}
-                <div className="bg-white border-4 border-[#008996] rounded-[20px] p-3.5 shadow-xl flex items-center justify-center size-[215px] sm:size-[225px]">
+                <div className="bg-white border-[3px] sm:border-4 border-[#008996] rounded-[16px] sm:rounded-[20px] p-2.5 sm:p-3.5 shadow-xl flex items-center justify-center size-[170px] sm:size-[205px] md:size-[225px]">
                   {pairingCode ? (
                     <QRCodeSVG
                       value={pairUrl}
                       size={190}
+                      className="w-full h-full"
                       level="H"
                       includeMargin={false}
                     />
                   ) : (
-                    <div className="size-[190px] flex items-center justify-center">
-                      <div className="size-8 rounded-full border-2 border-[#008996] border-t-transparent animate-spin" />
+                    <div className="size-full flex items-center justify-center">
+                      <div className="size-7 sm:size-8 rounded-full border-2 border-[#008996] border-t-transparent animate-spin" />
                     </div>
                   )}
                 </div>
               </div>
 
               {/* Countdown Refresh Text */}
-              <p className="mt-3 text-sm sm:text-base font-normal text-[var(--muted)] text-center">
+              <p className="mt-2 sm:mt-3 text-xs sm:text-sm md:text-base font-normal text-[var(--muted)] text-center">
                 Refreshes in {minutes}:{seconds}
               </p>
             </div>
 
             {/* Right Column: Setup Instructions & Unified Code Card */}
-            <div className="flex flex-col items-start gap-6 max-w-sm sm:max-w-md w-full">
-              <div className="space-y-2">
-                <p className="text-base font-bold text-[var(--muted)]">
+            <div className="flex flex-col items-start gap-3 sm:gap-4 md:gap-6 max-w-sm sm:max-w-md w-full min-w-0">
+              <div className="space-y-1 sm:space-y-2">
+                <p className="text-xs sm:text-sm md:text-base font-bold text-[var(--muted)]">
                   Screen Setup
                 </p>
-                <h1 className="text-3xl sm:text-4xl font-bold text-[var(--foreground)] tracking-tight">
+                <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-[var(--foreground)] tracking-tight leading-tight">
                   Pair this Display
                 </h1>
-                <p className="text-base font-normal text-[var(--muted)] leading-relaxed">
+                <p className="text-xs sm:text-sm md:text-base font-normal text-[var(--muted)] leading-relaxed">
                   Scan the QR code with your phone or visit the link below to link this display to your miniKast account.
                 </p>
               </div>
 
               {/* Pairing Code Card */}
-              <div className="w-full bg-[var(--surface)] border border-[var(--muted)] rounded-[16px] px-4 py-2.5 flex items-center justify-between shadow-2xs">
-                <span className="text-base font-normal text-[var(--muted)]">
+              <div className="w-full bg-[var(--surface)] border border-[var(--muted)] rounded-[12px] sm:rounded-[16px] px-3.5 sm:px-4 py-2 sm:py-2.5 flex items-center justify-between shadow-2xs">
+                <span className="text-xs sm:text-sm md:text-base font-normal text-[var(--muted)]">
                   Pairing Code
                 </span>
-                <span className="text-xl sm:text-2xl font-bold text-[var(--accent)] font-mono tracking-wide">
+                <span className="text-lg sm:text-xl md:text-2xl font-bold text-[var(--accent)] font-mono tracking-wide">
                   {pairingCode ? pairingCode.replace("-", " -") : "···· - ····"}
                 </span>
               </div>
 
-              {/* Manual Link Fallback */}
-              <p className="text-xs text-[var(--muted)] font-mono">
-                Manual link: <span className="text-[var(--foreground)] underline">{appUrl}/pair?code={pairingCode}</span>
-              </p>
+              {/* Manual Link Fallback - Clickable */}
+              <div className="text-[11px] sm:text-xs text-[var(--muted)] font-mono flex items-center gap-1.5 flex-wrap">
+                <span>Manual link:</span>
+                {pairingCode ? (
+                  <a
+                    href={pairUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[var(--foreground)] hover:text-[var(--accent)] underline transition-colors break-all focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] rounded cursor-pointer inline-flex items-center gap-1 font-semibold"
+                    title="Open pairing URL in new tab"
+                  >
+                    <span>{appUrl}/pair?code={pairingCode}</span>
+                    <svg className="size-3 shrink-0 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                  </a>
+                ) : (
+                  <span className="text-[var(--muted)] opacity-60">Loading…</span>
+                )}
+              </div>
             </div>
           </div>
         </main>
 
         {/* Footer */}
-        <footer className="w-full text-center text-xs text-[var(--muted)] py-4 z-10">
+        <footer className="w-full text-center text-[10px] sm:text-xs text-[var(--muted)] py-2 sm:py-3 z-10 shrink-0">
           <span>TV Mode Active &bull; Auto-reconnecting on signal loss</span>
         </footer>
       </div>
@@ -1200,43 +1217,43 @@ export default function TvPage() {
   if (state === "paired" && !menuUrl && (!menuData || menuMode === "static")) {
     const nextTheme = theme === "light" ? "dark" : "light";
     return (
-      <div className="home-shell min-h-screen w-screen flex flex-col justify-between select-none overflow-hidden relative bg-[var(--background)] text-[var(--foreground)] transition-colors duration-300">
+      <div className="home-shell h-screen h-[100dvh] max-h-screen w-screen flex flex-col justify-between select-none overflow-hidden relative bg-[var(--background)] text-[var(--foreground)] transition-colors duration-300">
         <div className="home-noise" aria-hidden="true" />
 
         {/* Top Header Controls */}
-        <header className="w-full flex items-center justify-between px-6 py-4 z-20">
+        <header className="w-full flex items-center justify-between px-4 sm:px-6 py-2.5 sm:py-4 z-20 shrink-0">
           <div className="flex items-center gap-2">
-            <ThemeAwareLogo theme={theme} className="h-6 w-[108px]" />
+            <ThemeAwareLogo theme={theme} className="h-5 sm:h-6 w-[90px] sm:w-[108px]" />
           </div>
 
-          <div className="flex items-center gap-2 text-xs text-[var(--muted)]">
+          <div className="flex items-center gap-1.5 sm:gap-2 text-xs text-[var(--muted)]">
             <button
               onClick={() => setTheme(nextTheme)}
               title={`Switch to ${nextTheme} theme`}
               aria-label={`Switch to ${nextTheme} theme`}
-              className="px-2.5 py-1.5 rounded-lg bg-[var(--surface)] hover:bg-[var(--surface-soft)] border border-[var(--accent-soft)] text-[var(--foreground)] transition-colors flex items-center justify-center cursor-pointer shadow-2xs"
+              className="px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-lg bg-[var(--surface)] hover:bg-[var(--surface-soft)] border border-[var(--accent-soft)] text-[var(--foreground)] transition-colors flex items-center justify-center cursor-pointer shadow-2xs"
             >
-              {theme === "light" ? <MoonIcon className="w-4 h-4" /> : <SunIcon className="w-4 h-4" />}
+              {theme === "light" ? <MoonIcon className="w-3.5 sm:w-4 h-3.5 sm:h-4" /> : <SunIcon className="w-3.5 sm:w-4 h-3.5 sm:h-4" />}
             </button>
             <button
               onClick={toggleFullscreen}
-              className="px-3 py-1.5 rounded-lg bg-[var(--surface)] hover:bg-[var(--surface-soft)] border border-[var(--accent-soft)] text-[var(--foreground)] transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
+              className="px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-[var(--surface)] hover:bg-[var(--surface-soft)] border border-[var(--accent-soft)] text-[var(--foreground)] transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs text-[11px] sm:text-xs"
             >
-              <kbd className="px-1.5 py-0.5 bg-[var(--surface-soft)] border border-[var(--accent-soft)] rounded text-[10px] font-mono text-[var(--muted)]">F</kbd>
+              <kbd className="hidden sm:inline-block px-1.5 py-0.5 bg-[var(--surface-soft)] border border-[var(--accent-soft)] rounded text-[10px] font-mono text-[var(--muted)]">F</kbd>
               <span>{isFullscreen ? "Exit Fullscreen" : "Fullscreen"}</span>
             </button>
           </div>
         </header>
 
         {/* Main Paired Card Content (Figma node 1485:2350) */}
-        <main className="flex-1 flex items-center justify-center p-6 z-10">
-          <div className="flex flex-col items-center gap-8 max-w-md w-full animate-in fade-in zoom-in-95 duration-500 text-center">
+        <main className="flex-1 flex items-center justify-center p-3 sm:p-6 z-10 min-h-0 overflow-hidden">
+          <div className="flex flex-col items-center gap-6 sm:gap-8 max-w-md w-full animate-in fade-in zoom-in-95 duration-500 text-center">
             {/* Green Tick Success Container (Figma node 1485:2416) */}
-            <div className="bg-[var(--surface-soft)] border-4 border-[#008996] rounded-[24px] size-[131px] flex items-center justify-center shadow-lg">
+            <div className="bg-[var(--surface-soft)] border-[3px] sm:border-4 border-[#008996] rounded-[20px] sm:rounded-[24px] size-[100px] sm:size-[131px] flex items-center justify-center shadow-lg shrink-0">
               <svg
                 viewBox="0 0 64 64"
                 fill="none"
-                className="w-16 h-16 text-[#00c04b]"
+                className="w-12 sm:w-16 h-12 sm:h-16 text-[#00c04b]"
                 stroke="currentColor"
                 strokeWidth="6"
                 strokeLinecap="round"
@@ -1247,23 +1264,23 @@ export default function TvPage() {
             </div>
 
             {/* Heading & Next Step Card */}
-            <div className="flex flex-col items-center gap-4 w-full">
-              <h1 className="text-[32px] font-bold text-[var(--foreground)] leading-tight tracking-tight">
+            <div className="flex flex-col items-center gap-3 sm:gap-4 w-full">
+              <h1 className="text-2xl sm:text-[32px] font-bold text-[var(--foreground)] leading-tight tracking-tight">
                 TV Paired!
               </h1>
 
               {/* Next Step Card (w-311px, rounded-16px) */}
-              <div className="w-[311px] max-w-full bg-[var(--surface)] border border-[var(--accent-soft)] rounded-[16px] p-4 flex flex-col gap-2 shadow-2xs text-center">
-                <span className="text-base font-bold text-[#008996]">
+              <div className="w-[311px] max-w-full bg-[var(--surface)] border border-[var(--accent-soft)] rounded-[14px] sm:rounded-[16px] p-3.5 sm:p-4 flex flex-col gap-1.5 sm:gap-2 shadow-2xs text-center">
+                <span className="text-sm sm:text-base font-bold text-[#008996]">
                   Next Step
                 </span>
-                <p className="text-base font-normal text-[var(--muted)] leading-5">
+                <p className="text-xs sm:text-base font-normal text-[var(--muted)] leading-5">
                   Open the miniKast dashboard, upload your design, and publish it!
                 </p>
               </div>
 
               {/* Live Updates Listener */}
-              <div className="flex items-center justify-center gap-2 text-base text-[var(--muted)] py-2">
+              <div className="flex items-center justify-center gap-2 text-xs sm:text-base text-[var(--muted)] py-1 sm:py-2">
                 <span className="size-2 rounded-full bg-[#00c04b] animate-ping shrink-0" />
                 <span>Listening for live updates...</span>
               </div>
@@ -1272,7 +1289,7 @@ export default function TvPage() {
         </main>
 
         {/* Footer */}
-        <footer className="w-full text-center text-xs text-[var(--muted)] py-4 z-10">
+        <footer className="w-full text-center text-[10px] sm:text-xs text-[var(--muted)] py-2 sm:py-3 z-10 shrink-0">
           <span>TV Mode Active &bull; {tvName} &bull; Auto-reconnecting on signal loss</span>
         </footer>
       </div>
